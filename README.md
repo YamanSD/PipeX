@@ -7,6 +7,7 @@ PipeX is an online conferencing web application, based on a mesh WebRTC architec
 - [Technologies Used](#technologies-used)
 - [Database Schema](#database-schema)
 - [API Endpoints](#api-endpoints)
+- [Sockets Endpoints](#socket-endpoints)
 - [Setup](#setup)
 - [Usage](#usage)
 - [License](#license)
@@ -117,7 +118,28 @@ PipeX exposes the following API endpoints for interaction:
     - `newEmail`: new email of the user, optional.
     - `newPassword`: new password of the user, optional.
    
-- 
+- `/api/sessions/sessionInfo`
+  - **Method**: POST
+  - **Description**: Returns the session information.
+  - **Parameters**:
+    - `Authorization header`: having the user token.
+    - `sessionToken`: ID of the session, or a valid session token.
+  - **Response**:
+    - `session`: Infomration about the session.
+    - `chat`: Session chat log.
+    - `attendees`: Users that attended the session.
+
+ - `/api/sessions/sessionInfo`
+  - **Method**: POST
+  - **Description**: Returns list of session IDs belonging to the user.
+  - **Parameters**:
+    - `Authorization header`: having the user token.
+  - **Response**:
+    - `sessionIds`: List of integers, each representing a session ID.
+
+## Socket Endpoints
+
+
 
 ## Setup
 

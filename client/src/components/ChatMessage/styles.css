@@ -1,0 +1,71 @@
+.message {
+  display: flex;
+  text-align: left;
+}
+.message.sent {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.message.sent .message__content {
+  color: #252525;
+  background-color: #8cb9fc;
+}
+.message.sent .message__content__text {
+  padding: 0 8px 0 8px;
+}
+.message.sent .message__content__at {
+  padding: 0 8px 0 16px;
+}
+.message.received .message__content {
+  background: #fff;
+  color: #252525;
+}
+
+.directed {
+  background: #0468ff;
+  color: white
+}
+.message.received .message__content__text {
+  padding: 0 16px 0 8px;
+}
+.message.received .message__content__at {
+  padding: 0 8px 0 9px;
+}
+.sent__content {
+  border-radius: 15px 20px 0 25px;
+}
+.message__content {
+  max-width: 60vw;
+  margin-top: 10px;
+  margin-left: 5px;
+  margin-right: 5px;
+  line-height: 24px;
+  position: relative;
+  color: white;
+  overflow: hidden;
+  word-wrap: break-word;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+}
+.received__content {
+  border-radius: 25px 15px 20px 0;
+}
+.message__content__sender {
+  margin: 0 0 -4px;
+  padding: 2px 8px 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.message__content__text {
+  text-align: left;
+  margin-bottom: 5px;
+}
+.message__content__at {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  margin-top: -3px;
+  width: 100%;
+  font-size: 0.725rem;
+  font-weight: 500;
+}

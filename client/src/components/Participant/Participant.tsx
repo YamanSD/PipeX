@@ -12,6 +12,7 @@ type Properties = {
     peer?: SimplePeer.Instance,
     uid: string,
     isMuted: boolean,
+    bstream?: MediaStream,
     isHidden: boolean,
     isUser: boolean,
     userRef?: React.RefObject<HTMLVideoElement>
@@ -62,14 +63,29 @@ const Username = styled.p`
  * @param peer representing the participant.
  * @param uid ID of the participant.
  * @param isUser true if the participant is the user.
- * @param stream user stream.
+ * @param bstream user stream.
  * @param userRef reference to the video element, provided for current user.
  * @constructor
  */
-const Participant = ({isHidden, isMuted, isUser, peer, userRef, uid}: Properties) => {
+const Participant = ({isHidden, isMuted, isUser, bstream, peer, userRef, uid}: Properties) => {
     const ref = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
+        if (bstream) {
+            navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: true
+            }).then(stream => {
+                if (ref.current) {
+                    ref.current.srcObject = stream;
+                }
+            });
+        }
+    }, [])
+
+    useEffect(() => {
+
+
         if (peer && !userRef) {
             peer.on('stream', (stream) => {
                 if (ref.current) {

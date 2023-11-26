@@ -273,6 +273,7 @@ const ParticipantGrid = ({uid, create, cam, mic,
                 <Participant
                     userRef={userVideo}
                     isUser={true}
+                    bstream={streamRef.current}
                     key={`${uid}`}
                     peer={undefined}
                     uid={uid}
@@ -284,6 +285,7 @@ const ParticipantGrid = ({uid, create, cam, mic,
                     Object.keys(peers).map((userId, index) => {
                         return userId !== uid ? (
                             <Participant
+                                bstream={streamRef.current?.clone()}
                                 isUser={false}
                                 key={`${index}`}
                                 peer={peers[userId].peer}

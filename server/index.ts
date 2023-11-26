@@ -3,11 +3,11 @@ import cors from "cors";
 import {Server} from 'socket.io';
 import {createServer} from "http";
 import bodyParser from "body-parser";
-import {SessionRouter, UserRouter} from "../routes";
-import {SessionController} from "../controllers";
-import {SocketEvent} from "../sockets";
+import {SessionRouter, UserRouter} from "./routes";
+import {SessionController} from "./controllers";
+import {SocketEvent} from "./sockets";
 import 'dotenv';
-import {TokenValidator} from "../validations";
+import {TokenValidator} from "./validations";
 
 
 /* application port */

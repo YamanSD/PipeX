@@ -81,7 +81,7 @@ const HomeScreen = ({setShowNavBar}: Properties) => {
                         }
                     });
                 } else {
-                    navigation(`/conference/false/false`, {
+                    navigation(`/conference/true/true`, {
                         state: {
                             sessionId: session,
                             sessionPassword: password,

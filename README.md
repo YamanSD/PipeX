@@ -7,7 +7,7 @@ PipeX is an online conferencing web application, based on a mesh WebRTC architec
 - [Technologies Used](#technologies-used)
 - [Database Schema](#database-schema)
 - [API Endpoints](#api-endpoints)
-- [Sockets Endpoints](#socket-endpoints)
+- [Socket Endpoints](#socket-endpoints)
 - [Setup](#setup)
 - [Usage](#usage)
 - [License](#license)

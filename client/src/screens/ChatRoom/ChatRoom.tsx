@@ -100,8 +100,12 @@ export default function ChatRoom({setShowNavBar}: Properties) {
                 toastId: 'termSuccess',
             });
             const user = LocalStorage.getUser();
-            user.currentRoom = undefined;
-            LocalStorage.setUser(user);
+
+            if (user) {
+                user.currentRoom = undefined;
+                LocalStorage.setUser(user);
+            }
+
             navigation('/home');
         });
     }, [navigation])

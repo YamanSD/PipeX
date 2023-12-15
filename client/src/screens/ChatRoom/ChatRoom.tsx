@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from "react";
+import React, {useCallback, useEffect, useRef, useState} from "react";
 import {ChatMessage, JoinLeaveMessage} from "../../components";
 import TextField from '@mui/material/TextField';
 import {Emitter, Http, Listener, LocalStorage} from '../../services';
@@ -65,12 +65,14 @@ type Properties = {
 export default function ChatRoom({setShowNavBar}: Properties) {
     const [messageText, setMessageText] = useState("");
     const [loading, setLoading] = useState(false);
+    const messagesRef = useRef<(Message | JoinLeaveMsg)[]>([]);
     const [messages, setMessages] = useState<(Message | JoinLeaveMsg)[]>([]);
     const dummy = useRef<HTMLDivElement>(null);
     const location = useLocation();
     const user = useRef(LocalStorage.getUser());
     const [users, setUsers] = useState<{[uid: string]: boolean}>({});
     const navigation = useNavigate();
+    const firstActivation = useRef(true);
     const [target, setTarget] = useState<string>("Everyone");
     const {sessionId, create, sessionPassword, initUsers} = location.state as {
         sessionId: number | string,
@@ -87,6 +89,24 @@ export default function ChatRoom({setShowNavBar}: Properties) {
         });
     }
 
+    /* used to play message sounds */
+    const [receiveSound] = useSound(require('../../assets/sounds/imessage_receive.mp3'));
+    const [sendSound] = useSound(require('../../assets/sounds/imessage_send.mp3'));
+
+    /* on termination listener */
+    useEffect(() => {
+        Listener.onTermination(() => {
+            toast.info("Session terminated", {
+                toastId: 'termSuccess',
+            });
+            const user = LocalStorage.getUser();
+            user.currentRoom = undefined;
+            LocalStorage.setUser(user);
+            navigation('/home');
+        });
+    }, [navigation])
+
+    /* users listener */
     useEffect(() => {
         if (initUsers) {
             const temp: {[u: string]: boolean} = {};
@@ -99,50 +119,6 @@ export default function ChatRoom({setShowNavBar}: Properties) {
         }
     }, [initUsers]);
 
-    /* used to play message sounds */
-    const [receiveSound] = useSound(require('../../assets/sounds/imessage_receive.mp3'));
-    const [sendSound] = useSound(require('../../assets/sounds/imessage_send.mp3'));
-
-    /* on message listener */
-    Listener.onMsg((message) => {
-        if (message.sender !== user.current?.uid) {
-            receiveSound();
-        }
-
-        setMessages([...messages, message]);
-    });
-
-    /* on termination listener */
-    useEffect(() => {
-        Listener.onTermination(() => {
-            navigation('/home');
-            toast.info("Session terminated", {
-                toastId: 'termSuccess',
-            });
-        });
-    }, [navigation])
-    
-
-    Listener.onJoin((res) => {
-        users[res.uid] = true;
-        setUsers({...users});
-        setMessages([...messages, {
-            uid: res.uid,
-            join: true
-        }]);
-    });
-
-    /* on leave listener */
-    Listener.onLeave((res) => {
-        if (users[res.uid]) {
-            users[res.uid] = false;
-            setUsers({...users});
-            setMessages([...messages, {
-                uid: res.uid,
-                join: false
-            }]);
-        }
-    });
 
     /* hides app navbar */
     useEffect(() => {
@@ -150,11 +126,48 @@ export default function ChatRoom({setShowNavBar}: Properties) {
     }, [location.pathname, setShowNavBar]);
 
     /* scrolls to bottom on message */
-    useEffect(() => {
+    useCallback(() => {
         if (dummy.current) {
-          dummy.current.scrollIntoView({ behavior: "smooth" });
+            dummy.current.scrollIntoView({ behavior: "smooth" });
         }
     }, [messages]);
+
+    /* activate listeners only once */
+    if (firstActivation.current) {
+        firstActivation.current = false;
+
+        /* on message listener */
+        Listener.onMsg((message) => {
+            messages.push(message);
+            setMessages([...messages]);
+
+            if (message.sender !== user.current?.uid) {
+                receiveSound();
+            }
+        });
+
+        /* on leave listener */
+        Listener.onLeave((res) => {
+            users[res.uid] = false;
+            setUsers({...users});
+            messages.push({
+                uid: res.uid,
+                join: false
+            });
+            setMessages([...messages]);
+        });
+
+        /* on join listener */
+        Listener.onJoin((res) => {
+            users[res.uid] = true;
+            setUsers({...users});
+            messages.push({
+                uid: res.uid,
+                join: true
+            });
+            setMessages([...messages]);
+        });
+    }
 
     /**
      * Handles sending a message.

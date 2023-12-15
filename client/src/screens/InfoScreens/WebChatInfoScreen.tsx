@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useContext, useEffect, useRef, useState} from 'react';
 import {
     BodyContainer,
     ButtonContainer,
@@ -30,9 +30,17 @@ const WebChatInfoScreen = ({setShowNavBar}: Properties) => {
     const [pass, setPass] = useState<string>("");
     const [isBadPass, setIsBadPass] = useState(false);
     const location = useLocation();
+    const hasPassed = useRef(true);
     const navigation = useNavigate();
 
     useEffect(() => {
+        if (hasPassed.current) {
+            hasPassed.current = false;
+        } else {
+            return;
+        }
+
+
         setShowNavBar(true);
 
         const user = LocalStorage.getUser();

@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {ScreenComponents} from "../../components";
 import {useLocation, useNavigate, useParams} from "react-router-dom";
 import {Emitter, Http, LocalStorage} from '../../services';
@@ -32,6 +32,7 @@ const HomeScreen = ({setShowNavBar}: Properties) => {
     const [badParams, setBadParams] = useState(false);
     const navigation = useNavigate();
     const location = useLocation();
+    const hasPassed = useRef(true);
     const {invalid} = useParams();
 
     useEffect(() => {
@@ -44,6 +45,12 @@ const HomeScreen = ({setShowNavBar}: Properties) => {
     }, [invalid]);
 
     useEffect(() => {
+        if (hasPassed.current) {
+            hasPassed.current = false;
+        } else {
+            return;
+        }
+
         setShowNavBar(true);
 
         const user = LocalStorage.getUser();

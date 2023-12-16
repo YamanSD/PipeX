@@ -9,7 +9,7 @@ import {handleBadListener, handleBadRes, verifyToken} from "./helpers";
 import {Session} from "../model";
 import {Server, Socket} from "socket.io";
 import {RoomHandle, SocketEvent} from "../sockets";
-import {JoinArgs, LeaveArgs, MessageArgs, MuteArgs, ReturnSignalArgs, SendSignalArgs} from "../sockets/RoomHandle";
+import {JoinArgs, LeaveArgs, MessageArgs, PrefArgs, ReturnSignalArgs, SendSignalArgs} from "../sockets/RoomHandle";
 
 
 /**
@@ -153,8 +153,7 @@ export function attachListeners(io: Server, socket: Socket): void {
     onJoinListener(io, socket);
     onTerminateListener(io, socket);
     onLeaveListener(io, socket);
-    onMuteListener(io, socket);
-    onHideListener(io, socket);
+    onPreferenceListener(io, socket);
     onMessageListener(io, socket);
     onSignalListener(io, socket);
 }
@@ -323,8 +322,8 @@ function onLeaveListener(io: Server, socket: Socket) {
  * @param io socket.io server.
  * @param socket socket instance.
  */
-function onMuteListener(io: Server, socket: Socket) {
-    socket.on(SocketEvent.MUTE, async (argsList: MuteArgs, callback: (args: {
+function onPreferenceListener(io: Server, socket: Socket) {
+    socket.on(SocketEvent.PREFERENCE, async (argsList: PrefArgs, callback: (args: {
         response: Http,
         err?: unknown,
         result?: any
@@ -353,45 +352,7 @@ function onMuteListener(io: Server, socket: Socket) {
         }
 
         /* try to join the session, calls callback in case of failure or success */
-        listener.onMute(socket, argsList, callback);
-    });
-}
-
-/**
- * @param io socket.io server.
- * @param socket socket instance.
- */
-function onHideListener(io: Server, socket: Socket) {
-    socket.on(SocketEvent.HIDE, async (argsList: MuteArgs, callback: (args: {
-        response: Http,
-        err?: unknown,
-        result?: any
-    }) => any) => {
-        const {uid, sessionToken} = argsList;
-
-        /* check for missing data */
-        if (!uid || !sessionToken) {
-            callback({
-                response: Http.BAD,
-                err: "missing uid and/or session ID"
-            });
-            return;
-        }
-
-        /* get listener */
-        const listener = RoomHandle.getListener(sessionToken);
-
-        /* check listener */
-        if (!listener) {
-            callback({
-                response: Http.NOT_FOUND,
-                err: "session does not exist or has ended"
-            });
-            return;
-        }
-
-        /* try to join the session, calls callback in case of failure or success */
-        listener.onHide(socket, argsList, callback);
+        listener.onPreference(socket, argsList, callback);
     });
 }
 

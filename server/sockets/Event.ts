@@ -8,8 +8,7 @@
  * >- JOIN: a user joined.
  * >- LEAVE: a user left.
  * >- CREATE: a user wants to create a session.
- * >- HIDE: a user changed their camera status.
- * >- MUTE: a user changed their mic status.
+ * >- PREFERENCE: a user changed their preferences.
  * >- TERMINATE: a user terminated their session.
  * >- SEND_SIGNAL: a user sent a WebRTC signal.
  * >- RETURN_SIGNAL: forward WebRTC signal to another user.
@@ -22,8 +21,7 @@ enum Event {
     JOIN = "join",
     LEAVE = "leave",
     TERMINATE = "terminate",
-    MUTE = "mute",
-    HIDE = "hide",
+    PREFERENCE = "preference",
     SEND_SIGNAL = "send_signal",
     RETURN_SIGNAL = "return_signal"
 }

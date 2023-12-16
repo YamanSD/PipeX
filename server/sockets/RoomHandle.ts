@@ -87,21 +87,13 @@ export type MessageArgs = {
  * >- uid: User ID that changed their state.
  * >- value: true, user mic set to mute, false user mic open.
  */
-export type MuteArgs = {
+export type PrefArgs = {
     uid: string,
-    value: boolean,
-    sessionToken: string
-};
-
-/**
- * Type alias for the hide camera listener.
- *
- * >- uid: User ID that changed their state.
- * >- value: true, user camera set to hidden, false user camera is shown.
- */
-export type HideArgs = {
-    uid: string,
-    value: boolean,
+    value: {
+        audio: boolean,
+        video: boolean,
+        screen: boolean
+    },
     sessionToken: string
 };
 
@@ -137,7 +129,7 @@ export default class RoomHandle {
      *
      * @private
      */
-    private readonly userMediaStatus: {[uid: string]: {audio: boolean, video: boolean}};
+    private readonly userMediaStatus: {[uid: string]: {audio: boolean, video: boolean, screen: boolean}};
 
     /**
      * Reference to the socket.io server instance.
@@ -210,7 +202,8 @@ export default class RoomHandle {
      * @param video video status of the user on join.
      * @private
      */
-    private async addUser(socket: Socket, uid: string, token: string, audio: boolean, video: boolean) {
+    private async addUser(socket: Socket, uid: string, token: string,
+                          audio: boolean, video: boolean) {
         this.connectedUsers.set(uid, token);
 
         /* join the new user's private room, and global room */
@@ -227,7 +220,7 @@ export default class RoomHandle {
         }
 
         /* set user init media value */
-        this.userMediaStatus[uid] = {audio: audio, video: video};
+        this.userMediaStatus[uid] = {audio: audio, video: video, screen: false};
 
         /* broadcast to all users */
         this.io.to(this.roomId).emit(Event.JOIN, {uid: uid, audio: audio, video: video});
@@ -554,13 +547,13 @@ export default class RoomHandle {
     }
 
     /**
-     * Callback function on mute event.
+     * Callback function on media preference event.
      *
      * @param socket new user socket.
      * @param argList arguments provided by user.
      * @param callback responds to user.
      */
-    public onMute(socket: Socket, argList: MuteArgs, callback: Callback) {
+    public onPreference(socket: Socket, argList: PrefArgs, callback: Callback) {
         const {uid, value} = argList;
 
         /* check for missing data */
@@ -572,37 +565,13 @@ export default class RoomHandle {
             return;
         }
 
-        /* set user audio value */
-        this.userMediaStatus[uid].audio = value;
+        /* set user pref value */
+        this.userMediaStatus[uid] = value;
 
-        this.io.to(this.roomId).emit(Event.MUTE, { uid: uid, value: value });
-
-        callback({ response: Http.OK });
-    }
-
-    /**
-     * Callback function on hide event.
-     *
-     * @param socket new user socket.
-     * @param argList arguments provided by user.
-     * @param callback responds to user.
-     */
-    public onHide(socket: Socket, argList: HideArgs, callback: Callback) {
-        const {uid, value} = argList;
-
-        /* check for missing data */
-        if (!uid) {
-            callback({
-                response: Http.BAD,
-                err: "Missing uid"
-            });
-            return;
-        }
-
-        /* set user video value */
-        this.userMediaStatus[uid].video = value;
-
-        this.io.to(this.roomId).emit(Event.HIDE, { uid: uid, value: value });
+        this.io.to(this.roomId).emit(Event.PREFERENCE, {
+                uid: uid,
+                value: value
+        });
 
         callback({ response: Http.OK });
     }

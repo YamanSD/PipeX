@@ -9,7 +9,7 @@ import {handleBadListener, handleBadRes, verifyToken} from "./helpers";
 import {Session} from "../model";
 import {Server, Socket} from "socket.io";
 import {RoomHandle, SocketEvent} from "../sockets";
-import {JoinArgs, LeaveArgs, MessageArgs, PrefArgs, ReturnSignalArgs, SendSignalArgs} from "../sockets/RoomHandle";
+import {JoinArgs, LeaveArgs, MessageArgs, PrefArgs, ReadyArgs} from "../sockets/RoomHandle";
 
 
 /**
@@ -148,84 +148,14 @@ async function checkUserToken(email: string, token: string): Promise<boolean> {
  * @param io socket.io server instance.
  * @param socket to attach listeners to.
  */
-export function attachListeners(io: Server, socket: Socket): void {
+export function attachListeners(io: Server, socket: Socket) {
     onCreateListener(io, socket);
     onJoinListener(io, socket);
     onTerminateListener(io, socket);
     onLeaveListener(io, socket);
     onPreferenceListener(io, socket);
     onMessageListener(io, socket);
-    onSignalListener(io, socket);
-}
-
-/**
- * @param io socket.io server.
- * @param socket socket instance.
- */
-function onSignalListener(io: Server, socket: Socket) {
-    socket.on(SocketEvent.SEND_SIGNAL, async (argsList: SendSignalArgs, callback: (args: {
-        response: Http,
-        err?: unknown,
-        result?: any
-    }) => any) => {
-        const {target, sender, sessionToken} = argsList;
-
-        /* check for missing data */
-        if (!sender || !target || !sessionToken) {
-            callback({
-                response: Http.BAD,
-                err: "missing sender, target, and/or session ID"
-            });
-            return;
-        }
-
-        /* get listener */
-        const listener = RoomHandle.getListener(sessionToken);
-
-        /* check listener */
-        if (!listener) {
-            callback({
-                response: Http.NOT_FOUND,
-                err: "session does not exist or has ended"
-            });
-            return;
-        }
-
-        /* try to join the session, calls callback in case of failure or success */
-        listener.onSendSignal(socket, argsList, callback);
-    });
-
-    socket.on(SocketEvent.RETURN_SIGNAL, async (argsList: ReturnSignalArgs, callback: (args: {
-        response: Http,
-        err?: unknown,
-        result?: any
-    }) => any) => {
-        const {target, sender, sessionToken} = argsList;
-
-        /* check for missing data */
-        if (!sender || !target || !sessionToken) {
-            callback({
-                response: Http.BAD,
-                err: "missing sender, target, and/or session ID"
-            });
-            return;
-        }
-
-        /* get listener */
-        const listener = RoomHandle.getListener(sessionToken);
-
-        /* check listener */
-        if (!listener) {
-            callback({
-                response: Http.NOT_FOUND,
-                err: "session does not exist or has ended"
-            });
-            return;
-        }
-
-        /* try to join the session, calls callback in case of failure or success */
-        listener.onReturnSignal(socket, argsList, callback);
-    });
+    onReadyListener(io, socket);
 }
 
 /**
@@ -237,7 +167,7 @@ function onCreateListener(io: Server, socket: Socket) {
         response: Http,
         err?: unknown,
         result?: any
-    }) => any) => {
+    }) => any = () => {}) => {
         /* token is user token */
         const {token, uid, sessionPassword, isChat} = argsList;
 
@@ -289,7 +219,7 @@ function onLeaveListener(io: Server, socket: Socket) {
         response: Http,
         err?: unknown,
         result?: any
-    }) => any) => {
+    }) => any = () => {}) => {
         const {uid, sessionToken} = argsList;
 
         /* check for missing data */
@@ -315,6 +245,28 @@ function onLeaveListener(io: Server, socket: Socket) {
 
         /* try to join the session, calls callback in case of failure or success */
         await listener.onLeave(sessionToken, socket, argsList, callback);
+
+        if (listener.isEmpty) {
+            const temp = await SessionService.verifySession(sessionToken);
+
+            /* if session creation failed */
+            if (temp.response !== ServiceResponse.SUCCESS) {
+                return;
+            }
+
+            /* get session */
+            const session = temp.result as Session;
+
+            session.endSession();
+            const upRes = await SessionService.updateSession(session);
+
+            if (upRes.response !== ServiceResponse.SUCCESS) {
+                return;
+            }
+
+            /* terminate session */
+            RoomHandle.terminateListener(socket, sessionToken);
+        }
     });
 }
 
@@ -327,7 +279,7 @@ function onPreferenceListener(io: Server, socket: Socket) {
         response: Http,
         err?: unknown,
         result?: any
-    }) => any) => {
+    }) => any = () => {}) => {
         const {uid, sessionToken} = argsList;
 
         /* check for missing data */
@@ -365,7 +317,7 @@ function onMessageListener(io: Server, socket: Socket) {
         response: Http,
         err?: unknown,
         result?: any
-    }) => any) => {
+    }) => any = () => {}) => {
         const {message, sender, sessionToken, token} = argsList;
 
         /* check for missing data */
@@ -414,7 +366,7 @@ function onJoinListener(io: Server, socket: Socket) {
         response: Http,
         err?: unknown,
         result?: any
-    }) => any) => {
+    }) => any = () => {}) => {
         const {token, uid, sessionToken, password} = argsList;
 
         /* check for missing data */
@@ -452,6 +404,52 @@ function onJoinListener(io: Server, socket: Socket) {
 }
 
 /**
+ * @param io socket.io server.
+ * @param socket socket instance.
+ */
+function onReadyListener(io: Server, socket: Socket) {
+    socket.on(SocketEvent.READY, async (argsList: ReadyArgs, callback: (args: {
+        response: Http,
+        err?: unknown,
+        result?: any
+    }) => any = () => {}) => {
+        const {token, uid, sessionToken} = argsList;
+
+        /* check for missing data */
+        if (!token || !uid || !sessionToken) {
+            callback({
+                response: Http.BAD,
+                err: "missing token, uid, session password, and/or session ID"
+            });
+            return;
+        }
+
+        if (!(await checkUserToken(uid, token))) {
+            callback({
+                response: Http.UNAUTHORIZED,
+                err: "User token mismatch"
+            });
+            return;
+        }
+
+        /* get listener */
+        const listener = RoomHandle.getListener(sessionToken);
+
+        /* check listener */
+        if (!listener) {
+            callback({
+                response: Http.NOT_FOUND,
+                err: "session does not exist or has ended"
+            });
+            return;
+        }
+
+        /* try to join the session, calls callback in case of failure or success */
+        await listener.onReady(socket, argsList, callback);
+    });
+}
+
+/**
  * Type alias for request parameters of terminate session listener.
  */
 type TerminateSessionRequest = {
@@ -469,7 +467,7 @@ function onTerminateListener(io: Server, socket: Socket) {
         response: Http,
         err?: unknown,
         result?: any
-    }) => any) => {
+    }) => any = () => {}) => {
         const {token, sessionToken, uid} = argsList;
 
         /* check for missing data */

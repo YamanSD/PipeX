@@ -10,6 +10,7 @@ import {Session} from "../model";
  * Type alias for the type of arguments received on user leave.
  *
  * >- uid: ID of the user that left.
+ * >- sessionToken: token of the session the user left.
  */
 export type LeaveArgs = {
     uid: string,
@@ -17,42 +18,14 @@ export type LeaveArgs = {
 };
 
 /**
- * Type alias for the send WebRTC signal event.
- *
- * >- signal: WebRTC signal.
- * >- sender: ID of the sender.
- * >- target: ID of the receiver.
- */
-export type SendSignalArgs = {
-    signal: any,
-    sender: string,
-    target: string,
-    sessionToken: string,
-    audio: boolean,
-    video: boolean,
-};
-
-/**
- * Type alias for the return WebRTC signal event.
- *
- * >- signal: WebRTC signal.
- * >- sender: ID of the previous sender.
- * >- id: ID of the previous target.
- */
-export type ReturnSignalArgs = {
-    signal: any,
-    sender: string,
-    target: string,
-    sessionToken: string,
-    audio: boolean,
-    video: boolean,
-};
-
-/**
  * Type alias for the type of arguments received on user join.
  *
- * >- uid: ID of the user that left.
+ * >- uid: ID of the user that joined.
  * >- token: current token of the user.
+ * >- password: session password.
+ * >- sessionToken: sessionToken to join.
+ * >- audio?: initial audio preferences.
+ * >- video?: initial video preferences.
  */
 export type JoinArgs = {
     uid: string,
@@ -80,6 +53,19 @@ export type MessageArgs = {
     receiver?: string,
     sessionToken: string
 };
+
+/**
+ * Type alias for the type of arguments received on user ready.
+ *
+ * >- uid: ID of the user that is ready.
+ * >- token: current token of the user.
+ * >- sessionToken: sessionToken joined.
+ */
+export type ReadyArgs = {
+    uid: string,
+    token: string,
+    sessionToken: string,
+}
 
 /**
  * Type alias for the mute mic listener.
@@ -206,9 +192,6 @@ export default class RoomHandle {
                           audio: boolean, video: boolean) {
         this.connectedUsers.set(uid, token);
 
-        /* join the new user's private room, and global room */
-        socket.join([this.roomId, this.getUserRoom(uid)]);
-
         /* add user to attendee list */
         const res = await AttendeeService.addAttendee(this.sessionId, uid);
 
@@ -219,11 +202,25 @@ export default class RoomHandle {
             };
         }
 
+        /* join the new user's private room, and global room */
+        socket.join([this.roomId, this.getUserRoom(uid)]);
+
         /* set user init media value */
         this.userMediaStatus[uid] = {audio: audio, video: video, screen: false};
 
+        /* on disconnect inform others of leave */
+        socket.on(Event.DISCONNECT, () => {
+            this.io.in(this.roomId).emit(Event.LEAVE, {
+                uid: uid
+            });
+        });
+
         /* broadcast to all users */
-        this.io.to(this.roomId).emit(Event.JOIN, {uid: uid, audio: audio, video: video});
+        this.io.to(this.roomId).emit(Event.JOIN, {
+            uid: uid,
+            peerId: this.toHex(uid),
+            preferences: {...this.userMediaStatus[uid]}
+        });
 
         /* success */
         return { response: res.response };
@@ -313,83 +310,14 @@ export default class RoomHandle {
     }
 
     /**
-     *
-     * @param socket of the sending user.
-     * @param argList signaling args.
-     * @param callback callback response function.
+     * @param v to be converted to hex.
+     * @returns the hex encoding of v.
+     * @private
      */
-    public onSendSignal(socket: Socket, argList: SendSignalArgs, callback: Callback) {
-        const {signal, sender, target, audio, video} = argList;
-
-        if (!sender || !target) {
-            callback({
-                response: Http.BAD,
-                err: "missing sender and/or target"
-            });
-            return;
-        } else if (!this.isConnected(target)) {
-            callback({
-                response: Http.NOT_FOUND,
-                err: "target not connected"
-            });
-            return;
-        } else if (target === sender) {
-            callback({ response: Http.OK });
-            return;
-        }
-
-        this.io.in(this.getUserRoom(target)).emit(
-            Event.SEND_SIGNAL,
-            {
-                signal,
-                sender,
-                target,
-                audio,
-                video
-            }
-        );
-
-        callback({ response: Http.OK });
-    }
-
-    /**
-     *
-     * @param socket of the sending user.
-     * @param argList signaling args.
-     * @param callback callback response function.
-     */
-    public onReturnSignal(socket: Socket, argList: ReturnSignalArgs, callback: Callback) {
-        const {signal, sender, target, audio, video} = argList;
-
-        if (!sender || !target) {
-            callback({
-                response: Http.BAD,
-                err: "missing sender and/or target"
-            });
-            return;
-        } else if (!this.isConnected(sender)) {
-            callback({
-                response: Http.NOT_FOUND,
-                err: "caller not connected"
-            });
-            return;
-        } else if (target === sender) {
-            callback({ response: Http.OK });
-            return;
-        }
-
-        this.io.in(this.getUserRoom(target)).emit(
-            Event.RETURN_SIGNAL,
-            {
-                signal,
-                sender,
-                target,
-                audio,
-                video
-            }
-        );
-
-        callback({ response: Http.OK });
+    private toHex(v: string): string {
+        return v.split("")
+            .map(c => c.charCodeAt(0).toString(16).padStart(2, "0"))
+            .join("");
     }
 
     /**
@@ -443,22 +371,80 @@ export default class RoomHandle {
             return;
         }
 
-        const res = await this.addUser(socket, uid, token, audio ?? false, video ?? false);
+        const res = await this.addUser(
+            socket,
+            uid,
+            token,
+            audio ?? false,
+            video ?? false
+        );
 
         if (res.response !== ServiceResponse.SUCCESS) {
             callback(handleBadListener(res.response, res.err));
             return;
         }
 
+        const usersInfo = Object.keys(this.userMediaStatus).map(uid => {
+            return {
+                peerId: this.toHex(uid),
+                ...this.userMediaStatus[uid]
+            }
+        });
+
         /* inform user that join is successful, and return list of users */
-        callback({ result: {users: this.userMediaStatus, isChat: this.isChat, creator: this.creator}, response: Http.OK });
+        callback({ result: {
+                users: usersInfo,
+                isChat: this.isChat,
+                creator: this.creator
+            },
+            response: Http.OK });
     }
 
     /**
-     * @returns true if the session is empty, or has 1 user.
+     * @returns true if the session is empty.
      */
-    public get isLast(): boolean {
+    public get isEmpty(): boolean {
         return this.connectedUsers.size === 0;
+    }
+
+    /**
+     * @returns the number of currently connected users.
+     */
+    public get userCount(): number {
+        return this.connectedUsers.size;
+    }
+
+    /**
+     * Callback function on leave event.
+     *
+     * @param socket new user socket.
+     * @param argList arguments provided by user.
+     * @param callback responds to user.
+     */
+    public async onReady(socket: Socket, argList: ReadyArgs, callback: Callback) {
+        const {uid} = argList;
+
+        /* check for missing data */
+        if (!uid) {
+            callback({
+                response: Http.BAD,
+                err: "Missing uid"
+            });
+            return;
+        } else if (!this.isConnected(uid)) {
+            callback({
+                response: Http.UNAUTHORIZED,
+                err: "Not in session"
+            });
+            return;
+        }
+
+        /* broadcast readiness to all */
+        this.io.in(this.roomId).emit(Event.READY, {
+            uid: uid
+        });
+
+        callback({ response: Http.OK });
     }
 
     /**
@@ -483,7 +469,7 @@ export default class RoomHandle {
         }
 
         /* if last user, terminate session */
-        if (this.isLast) {
+        if (this.isEmpty) {
             const temp = await SessionService.verifySession(sessionToken);
 
             /* if session creation failed */

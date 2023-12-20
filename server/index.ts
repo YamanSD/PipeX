@@ -1,13 +1,15 @@
 import express from "express";
 import cors from "cors";
 import {Server} from 'socket.io';
-import {createServer} from "http";
+import {createServer} from "https";
 import bodyParser from "body-parser";
 import {SessionRouter, UserRouter} from "./routes";
 import {SessionController} from "./controllers";
 import {SocketEvent} from "./sockets";
 import 'dotenv';
 import {TokenValidator} from "./validations";
+import {PeerServer} from "peer";
+import * as fs from "fs";
 
 
 /* application port */
@@ -16,26 +18,34 @@ const port = Number(process.env.APP_PORT);
 /* main parent URI for the API calls */
 const apiParent = '/api';
 
+/* SSL params */
+const privateKey = fs.readFileSync(`${__dirname}/cert.key`).toString();
+const certificate = fs.readFileSync(`${__dirname}/cert.crt`).toString();
+
 /* express API instance */
 const app = express();
 
 /* create an HTTP server */
-const server = createServer(app);
+const server = createServer({
+    key: privateKey,
+    cert: certificate
+}, app);
 
-/* Redirect to https */
-// app.get('*', (req, res, next) => {
-//     if (req.headers['x-forwarded-proto'] !== 'https' && process.env.APP_DEV) {
-//         return res.redirect(['https://', req.get('Host'), req.url].join(''));
-//     }
-//     next();
-// });
+/* create a PeerJS server instance */
+PeerServer({
+    port: Number(process.env.PEER_PORT),
+    ssl: {
+        key: privateKey,
+        cert: certificate
+    }
+});
 
 /*
  * listens for incoming connection event.
  * https://socket.io/docs/v4/ for further documentation.
  */
 const io = new Server(server, {
-    connectionStateRecovery: {}
+    connectionStateRecovery: {},
 });
 
 /*
@@ -84,5 +94,5 @@ io.on(SocketEvent.CONNECT, (socket) => {
 
 /* for testing purposes */
 server.listen(port, () => {
-    console.log(`Listening on http://localhost:${port}/`);
+    console.log(`Listening on https://localhost:${port}/`);
 });

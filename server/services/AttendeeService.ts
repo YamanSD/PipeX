@@ -38,7 +38,7 @@ export async function addAttendee(sessionId: number, uid: string): Result {
         });
 
         /* check if it does not exist */
-        if (doesExist === null) {
+        if (doesExist === null || doesExist.length === 0) {
             await Attendee.create({
                 SessionSessionId: session.sessionId,
                 UserUid: user.uid

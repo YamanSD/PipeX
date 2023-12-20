@@ -10,8 +10,7 @@
  * >- CREATE: a user wants to create a session.
  * >- PREFERENCE: a user changed their preferences.
  * >- TERMINATE: a user terminated their session.
- * >- SEND_SIGNAL: a user sent a WebRTC signal.
- * >- RETURN_SIGNAL: forward WebRTC signal to another user.
+ * >- READY: a user is ready to initiate a call.
  */
 enum Event {
     DISCONNECT = "diconnect",
@@ -22,8 +21,7 @@ enum Event {
     LEAVE = "leave",
     TERMINATE = "terminate",
     PREFERENCE = "preference",
-    SEND_SIGNAL = "send_signal",
-    RETURN_SIGNAL = "return_signal"
+    READY = "ready"
 }
 
 export default Event;

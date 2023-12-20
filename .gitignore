@@ -1,16 +1,16 @@
 # Created by https://www.toptal.com/developers/gitignore/api/node,webstorm
 # Edit at https://www.toptal.com/developers/gitignore?templates=node,webstorm
 
-./deprecated
-./dev
-../build
-./server/build
-./server/.idea
-./server/.env
-./server/node_modules
-./client/.idea
-./client/build
-./client/node_modules
+/deprecated
+/dev
+/build
+/server/build
+/server/.idea
+/server/.env
+/server/node_modules
+/client/.idea
+/client/build
+/client/node_modules
 
 ### Node ###
 # Logs

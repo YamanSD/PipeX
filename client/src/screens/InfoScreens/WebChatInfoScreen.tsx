@@ -40,7 +40,6 @@ const WebChatInfoScreen = ({setShowNavBar}: Properties) => {
             return;
         }
 
-
         setShowNavBar(true);
 
         const user = LocalStorage.getUser();
@@ -114,7 +113,7 @@ const WebChatInfoScreen = ({setShowNavBar}: Properties) => {
                                     create: true, sessionId: res.result, sessionPassword: pass
                                 }})
                             } else {
-                                toast.error(`Couldn't create session!`, {
+                                toast.error(`Couldn't create session! (${res.response})`, {
                                     toastId: 'noSession',
                                 });
                             }

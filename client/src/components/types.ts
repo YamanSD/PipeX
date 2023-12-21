@@ -1,19 +1,44 @@
+import React from "react";
+
 /**
- * >- audio: if true, the user is not muted.
- * >- avatarColor: avatar color of the user.
- * >- name: name of the user.
- * >- video: if true, the user has their camera open.
- * >- screen: if true, the user is sharing their screen.
+ * Generic component type.
  */
-export type participant = {
-    audio: boolean,
-    screen: boolean,
-    video: boolean,
-    avatarColor: string,
-    name: string,
-};
+export type Component<T = any> = (props: T) => JSX.Element;
+
+/**
+ * Generic type for react state setters.
+ */
+export type StateSetter<T = any> = React.Dispatch<React.SetStateAction<T>>;
 
 /**
  * Generic object type.
  */
 export type Generic<T = any> = {[_: string]: T};
+
+/**
+ * Type alias for user preferences.
+ */
+export type UserPreference = {
+    audio: boolean,
+    video: boolean,
+    screen: boolean
+};
+
+/**
+ * Type alias for the type of input given
+ * to the update preferences function.
+ */
+export type UpdatePreferences = {
+    audio?: boolean,
+    video?: boolean,
+    screen?: boolean
+};
+
+/**
+ * Type alias for the stored info about peers.
+ */
+export type UserPeerInfo = {
+    uid: string,
+    preferences: UserPreference,
+    peerId: string
+};

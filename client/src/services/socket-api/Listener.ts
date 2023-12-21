@@ -37,7 +37,7 @@ export function onMsg(callback: ListenerCallback<{
  *
  * @param callback takes joined user ID.
  */
-export function onJoin(callback: ListenerCallback<{uid: string, audio: boolean, video: boolean}>): void {
+export function onJoin(callback: ListenerCallback<{peerId: string, uid: string, preferences: {audio: boolean, video: boolean, screen: boolean}}>): void {
     listen(Event.JOIN, callback);
 }
 
@@ -46,22 +46,31 @@ export function onJoin(callback: ListenerCallback<{uid: string, audio: boolean, 
  *
  * @param callback takes ID of the user that left.
  */
-export function onLeave(callback: ListenerCallback<{uid: string}>): void {
+export function onLeave(callback: ListenerCallback<{uid: string, peerId: string}>): void {
     listen(Event.LEAVE, callback);
 }
 
 /**
- * @param callback takes ID of the user and value, true indicates muted.
+ * @param callback takes ID of the user and value.
  */
-export function onMute(callback: ListenerCallback<{uid: string, value: boolean}>): void {
-    listen(Event.MUTE, callback);
+export function onPreference(callback: ListenerCallback<{
+    uid: string,
+    peerId: string,
+    value: {
+        audio: boolean,
+        video: boolean,
+        screen: boolean
+    }}>
+): void {
+    listen(Event.PREFERENCE, callback);
 }
 
 /**
- * @param callback takes ID of the user and value, true indicates hidden camera.
+ * @param callback takes ID of the ready user.
  */
-export function onHide(callback: ListenerCallback<{uid: string, value: boolean}>): void {
-    listen(Event.HIDE, callback);
+export function onReady(callback: ListenerCallback<{peerId: string}>
+): void {
+    listen(Event.READY, callback);
 }
 
 /**

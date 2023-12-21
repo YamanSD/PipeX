@@ -1,0 +1,21 @@
+.main-screen{
+    width: 100vw;
+    height: 90vh;
+    background: #3c4043;
+    overflow-x: hidden;
+}
+
+.wrapper{
+    width: 100%;
+    padding: 10px;
+    overflow-y: scroll;
+}
+
+.footer{
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    overflow-x: hidden;
+    height: 10vh;
+    width: 100vw;
+}

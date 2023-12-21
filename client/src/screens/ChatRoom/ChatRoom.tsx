@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from "react";
-import {ChatMessage, JoinLeaveMessage} from "../../components";
+import {ChatMessage, JoinLeaveMessage, StateSetter} from "../../components";
 import TextField from '@mui/material/TextField';
 import {Emitter, Http, Listener, LocalStorage} from '../../services';
 import useSound from 'use-sound';
@@ -55,7 +55,7 @@ interface JoinLeaveMsg {
  * Type alias for the prop-type of the screen.
  */
 type Properties = {
-    setShowNavBar: React.Dispatch<React.SetStateAction<boolean>>
+    setShowNavBar: StateSetter<boolean>
 };
 
 /**
@@ -65,15 +65,14 @@ type Properties = {
 export default function ChatRoom({setShowNavBar}: Properties) {
     const [messageText, setMessageText] = useState("");
     const [loading, setLoading] = useState(false);
-    const messagesRef = useRef<(Message | JoinLeaveMsg)[]>([]);
     const [messages, setMessages] = useState<(Message | JoinLeaveMsg)[]>([]);
     const dummy = useRef<HTMLDivElement>(null);
-    const location = useLocation();
     const user = useRef(LocalStorage.getUser());
     const [users, setUsers] = useState<{[uid: string]: boolean}>({});
     const navigation = useNavigate();
     const firstActivation = useRef(true);
     const [target, setTarget] = useState<string>("Everyone");
+    const location = useLocation();
     const {sessionId, create, sessionPassword, initUsers} = location.state as {
         sessionId: number | string,
         create: boolean,

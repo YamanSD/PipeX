@@ -1,304 +1,242 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {Socket} from "socket.io-client";
-import {EmitterCallback} from "../../services/socket-api/config";
-import {Listener, Emitter} from '../../services';
-import Participant from "../Participant/Participant";
-import {GridLoader} from "react-spinners";
-import styled from "styled-components";
+import React, {useEffect, useRef, useState} from "react";
+import "./ParticipantGrid.css";
+import {connect} from "react-redux";
+import {
+    addParticipant,
+    Emitter,
+    Http,
+    Listener,
+    LocalStorage,
+    removeParticipant,
+    RootState,
+    setUser,
+    updateParticipant,
+    UserType
+} from "../../services";
 import {toast} from "react-toastify";
-import {useNavigate} from "react-router-dom";
-import Peer from "simple-peer";
-import Event from "../../services/socket-api/Event";
-
+import Peer, {MediaConnection} from "peerjs";
+import {Component, UserPeerInfo} from "../types";
+import {Participant} from "./Participant/Participant";
 
 /**
- * Type alias for the prop-type of the component.
+ * Type alias for the component props.
  */
 type Properties = {
-    uid: string,
-    sessionId: string,
-    create: boolean,
-    mic: boolean,
-    cam: boolean,
-    socket: Socket,
-    initUsers: {[uid: string]: {audio: boolean, video: boolean}},
-    callback: EmitterCallback,
-    streamRef: React.MutableRefObject<MediaStream | undefined>
-};
-
-/**
- * Type alias for the payload response.
- *
- * >- signal: specific to WebRTC.
- * >- sender: UID of the sender.
- * >- audio: if true, user has audio active.
- * >- video: if true, user has video active.
- */
-type PayloadType = {
-    signal: any,
-    sender: string,
-    audio: boolean,
-    video: boolean,
-    target: string,
-};
-
-/* computes the factors of a number */
-const factors = (number: number) => Array
-    .from(Array(number + 1), (_, i) => i)
-    .filter(i => number % i === 0)
-
-/**
- * Grid layout for the cameras
- */
-const Grid = styled.div`
-    width: 98vw;
-    height: 100%;
-    padding: 10px 0 10px 10px;
-    display: grid;
-    float: right;
-    grid-column-gap: 10px;
-    grid-row-gap: 10px;
-`;
-
-/**
- * Type alias for peers state.
- */
-type PeersType = {
-    [uid: string]: {
-        peer: Peer.Instance;
-        audio: boolean;
-        video: boolean;
+    myStream: MediaStream,
+    currentUser: UserType,
+    locationState: {
+        sessionId: number | string,
+        create: boolean,
+        sessionPassword?: string,
+        initUsers: {[uid: string]: any}
     }
 };
 
 /**
- * @param target ID of the target user to signal.
- * @param stream media stream.
- * @param callback callback response function.
- * @returns the created peer.
- * @private
- */
-function createPeer(
-    target: string,
-    stream: MediaStream,
-    callback: EmitterCallback): Peer.Instance {
-    const peer = new Peer({
-        initiator: true,
-        trickle: false,
-        stream: stream
-    });
-
-    peer.on('signal', (signal: any) => {
-        Emitter.sendSignal(signal, target, callback);
-    });
-
-    return peer;
-}
-
-/**
- * @param incomingSignal signal sent from sender.
- * @param sender ID of the sender user to signal.
- * @param stream media stream.
- * @param callback callback response function.
- * @returns the created peer.
- * @private
- */
-function addPeer(
-    incomingSignal: any,
-    sender: string,
-    stream: MediaStream,
-    callback: EmitterCallback): Peer.Instance {
-    const peer = new Peer({
-        initiator: false,
-        trickle: false,
-        stream,
-    });
-
-    peer.on('signal', (signal: any) => {
-        Emitter.sendReturn(signal, sender, callback);
-    });
-
-    /* signal the other peer */
-    peer.signal(incomingSignal);
-
-    return peer;
-}
-
-/**
- * @param uid ID of this user.
- * @param sessionId ID of the created session.
- * @param socket of the user.
- * @param initUsers initial users in the session.
- * @param streamRef reference to the user stream.
- * @param create true session is created, not joined.
- * @param callback for the session startup.
- * @param cam state of user camera.
- * @param mic state of user audio.
+ *
+ * @param participants already in the conference room.
+ * @param myStream
+ * @param currentUser
  * @constructor
  */
-const ParticipantGrid = ({uid, create, cam, mic,
-                             sessionId, initUsers, streamRef,
-                             callback, socket}: Properties) => {
-    const navigation = useNavigate();
-    const [isReady, setIsReady] = useState(false);
-    const [grid, setGrid] = useState({rows: 0, cols: 0});
-    const userVideo = useRef<HTMLVideoElement>(null);
+const ParticipantGrid = ({myStream, currentUser, locationState}: Properties) => {
+    const myPeer = useRef<Peer>(Emitter.refreshPeer());
+    const [gridCol, setGridCol] = useState(0);
+    const [gridColSize, setGridColSize] = useState(0);
+    const [gridRowSize, setGridRowSize] = useState(0);
 
-    /* state for the peers */
-    const [peers, setPeers] = useState<PeersType>({});
+    /* object containing all the discovered peers and their info */
+    const knownPeers = useRef<{[uid: string]: {
+            call?: MediaConnection,
+            stream?: MediaStream,
+            data: UserPeerInfo
+        }}>({});
 
-    /* copy of state, to prevent rerender loop */
-    const peersRef = useRef<PeersType>({});
-    const [isPresenter, setIsPresenter] = useState(false);
+    /* used for rendering and updating the front-end */
+    const [renderPeers, setRenderPeers] = useState(knownPeers.current);
 
+    const rerenderPeers = (peers: typeof knownPeers.current) => {
+        setRenderPeers({ ...peers });
+    };
+
+    /* used for triggering the listeners only once */
+    const hasConnected = useRef(false);
+
+    /* when the new users flag is triggered, re-calculate the dimensions */
     useEffect(() => {
-        navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true
-        }).then((stream) => {
-            streamRef.current = stream;
+        /* uids of discovered peers */
+        const participantCount = Object.keys(renderPeers).length;
 
-            if (userVideo.current) {
-                userVideo.current.srcObject = stream;
-            }
+        setGridCol(participantCount === 1 ? 1 : participantCount <= 4 ? 2 : 4);
+        setGridColSize(participantCount <= 4 ? 1 : 2);
+        setGridRowSize(
+            participantCount <= 4
+                ? participantCount
+                : Math.ceil(participantCount / 2)
+        );
+    }, [renderPeers]);
 
-            const tempPeers: PeersType = {};
-
-            /* add users already in the session */
-            Object.keys(initUsers).forEach((userId) => {
-                if (userId === uid) {
-                    return;
-                }
-
-                const peer = createPeer(userId, stream, callback);
-                tempPeers[userId] = {
-                    peer: peer,
-                    audio: initUsers[userId].audio,
-                    video: initUsers[userId].video
-                };
-            });
-
-            setPeers({...tempPeers});
-
-            Listener.onLeave((res) => {
-                delete peersRef.current[res.uid];
-                setPeers({...peersRef.current});
-            });
-
-            Listener.onMute((res) => {
-                if (res.uid !== uid) {
-                    peersRef.current[res.uid].audio = res.value;
-                    setPeers({...peersRef.current});
-                }
-            });
-
-            Listener.onHide((res) => {
-                if (res.uid !== uid) {
-                    peersRef.current[res.uid].video = res.value;
-                    setPeers({...peersRef.current});
-                }
-            });
-
-            /* activate the on user join listener */
-            socket.on(Event.SEND_SIGNAL, (payload: PayloadType) => {
-                const peer = addPeer(
-                    payload.signal,
-                    payload.sender,
-                    stream,
-                    callback
-                );
-
-                peersRef.current[payload.sender] = {
-                    peer: peer,
-                    audio: payload.audio,
-                    video: payload.video
-                };
-
-                setPeers({...peersRef.current});
-            });
-
-            /* activate the on user join respond */
-            socket.on(Event.RETURN_SIGNAL, (payload: PayloadType) => {
-                if (peersRef.current[payload.sender]) {
-                    const peer = peersRef.current[payload.sender].peer;
-                    peer.signal(payload.signal);
-                }
-            });
-
-            setIsReady(true);
-        });
-    }, [callback, initUsers, socket, uid, create, mic, cam, streamRef]);
-
-    useEffect(() => {
-        Listener.onTermination(() => {
-
-            navigation('/home');
-            toast.info("Session terminated", {
-                toastId: 'sessionTerminated2',
-            });
-        });
-    }, [navigation]);
-
-    /* modify grid dims */
-    useEffect(() => {
-        const uids = Object.keys(peers);
-        let factorList = factors(uids.length);
-
-        if (factorList.length === 2) {
-            // Prime number, so calculate for closest even
-            factorList = factors(uids.length + 1);
+    /**
+     *
+     * @param user
+     */
+    const connectNewUser = (user?: UserPeerInfo) => {
+        if (!user || user.uid === LocalStorage.getUser()?.uid) {
+            // Don't redisplay self
+            return;
         }
 
-        const listLength = factorList.length;
-        const cols = factorList[listLength / 2 - (listLength % 2 === 0 ? 1 : 0)];
-        const rows = factorList[listLength / 2];
+        /* call the user that joined */
+        const call = myPeer.current.call(user.peerId, myStream);
 
-        setGrid({
-            cols,
-            rows,
+        call.on('error', err => {
+            toast.error(`Call error. (${err})`, {
+                autoClose: false
+            });
         });
-    }, [peers, isPresenter, uid]);
 
-    return isReady ? (
+        call.on('stream', userVideoStream => {
+            knownPeers.current[user.peerId].stream = userVideoStream;
+            rerenderPeers(knownPeers.current);
+        });
+
+        call.on('close', () => {
+            removeUser(call.peer);
+        });
+
+        knownPeers.current[user.peerId].call = call;
+    };
+
+    const removeUser = (peerId: string) => {
+        if (knownPeers.current[peerId]) {
+            knownPeers.current[peerId].call?.close();
+            delete knownPeers.current[peerId];
+
+            rerenderPeers(knownPeers.current);
+        }
+    };
+
+    useEffect(() => {
+        if (currentUser && myStream) {
+            /* add the user stream */
+            knownPeers.current[''] = {
+                stream: myStream,
+                data: {
+                    uid: currentUser.uid,
+                    preferences: { ...currentUser.preferences },
+                    peerId: '' // Not needed
+                }
+            };
+
+            if (!hasConnected.current) {
+                hasConnected.current = true;
+
+                myPeer.current.on('call', call => {
+                    if (!(call.peer in knownPeers.current)) {
+                        knownPeers.current[call.peer] = {
+                            data: locationState.initUsers[call.peer]
+                        };
+                    }
+
+                    /* answer the call, and send back our stream */
+                    call.answer(myStream);
+
+                    /* when we receive the user stream we added it to the element */
+                    call.on('stream', userVideoStream => {
+                        if (call.peer in knownPeers.current
+                            && !knownPeers.current[call.peer].call) {
+                            knownPeers.current[call.peer].call = call;
+                            knownPeers.current[call.peer].stream = userVideoStream;
+                            rerenderPeers(knownPeers.current);
+                        }
+                    });
+                });
+
+                Listener.onJoin((args) => {
+                    knownPeers.current[args.peerId] = {
+                        data: args,
+                        call: undefined
+                    };
+                    rerenderPeers(knownPeers.current);
+                });
+
+                Listener.onReady(({peerId}) => {
+                    connectNewUser(knownPeers.current[peerId]?.data);
+                });
+
+                Listener.onLeave((args) => {
+                    removeUser(args.peerId);
+                });
+
+                Listener.onPreference((args) => {
+                   if (args.uid !== LocalStorage.getUser()?.uid) {
+                       knownPeers.current[args.peerId].data.preferences = args.value;
+                       rerenderPeers(knownPeers.current);
+                   }
+                });
+
+                Emitter.ready((res) => {
+                    if (res.response !== Http.OK) {
+                        toast.warn(`Couldn't ready (${res.response})`);
+                    } else {
+                        rerenderPeers(knownPeers.current);
+                    }
+                });
+            } else {
+                rerenderPeers(knownPeers.current);
+            }
+        }
+    }, [myStream, currentUser]);
+
+    return (
         <div
             style={{
-                height: "100%",
-                width: "100%"
+                // @ts-ignore
+                "--grid-size": gridCol,
+                "--grid-col-size": gridColSize,
+                "--grid-row-size": gridRowSize,
             }}
+            className={`participants`}
         >
-            <Grid style={{
-                gridTemplateRows: `repeat(${grid.rows}, 1fr)`,
-                gridTemplateColumns: `repeat(${grid.cols}, 1fr)`,
-            }}>
-                <Participant
-                    userRef={userVideo}
-                    isUser={true}
-                    bstream={streamRef.current}
-                    key={`${uid}`}
-                    peer={undefined}
-                    uid={uid}
-                    isMuted={!mic}
-                    isHidden={!cam}
-                />
-                {/* add the users */}
-                {
-                    Object.keys(peers).map((userId, index) => {
-                        return userId !== uid ? (
-                            <Participant
-                                bstream={streamRef.current?.clone()}
-                                isUser={false}
-                                key={`${index}`}
-                                peer={peers[userId].peer}
-                                uid={userId}
-                                isMuted={false}
-                                isHidden={false}
-                            />
-                        ) : null;
-                    })
-                }
-            </Grid>
+            {
+                Object.keys(renderPeers).map((peerId, index) => {
+                    return <Participant currentIndex={index}
+                                        username={renderPeers[peerId].data.uid}
+                                        preferences={renderPeers[peerId].data.preferences}
+                                        isCurrent={renderPeers[peerId].data.uid === LocalStorage.getUser()?.uid}
+                                        stream={renderPeers[peerId].stream}
+                    />;
+                })
+            }
         </div>
-    ) : <GridLoader size={20} color="#3498ff" />;
+    );
 };
 
-export default ParticipantGrid;
+const mapStateToProps = (state: RootState) => {
+    return {
+        participants: state.user.participants,
+        currentUser: state.user.currentUser,
+    };
+};
+
+/**
+ * @param dispatch
+ */
+const mapDispatchToProps = (dispatch: (...arg: any[]) => any) => {
+    return {
+        addParticipant: (user: UserType) => dispatch(addParticipant(user)),
+        setUser: (user: UserType) => dispatch(setUser(user)),
+        removeParticipant: (uid: string) => dispatch(removeParticipant(uid)),
+        updateParticipant: (user: UserType) => dispatch(updateParticipant(user)),
+    };
+};
+
+/**
+ * Type alias for the properties that are needed from parent.
+ */
+type InputProperties = {
+    myStream: Properties['myStream'],
+    locationState: Properties['locationState']
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(ParticipantGrid) as Component<InputProperties>;

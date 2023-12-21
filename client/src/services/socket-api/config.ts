@@ -1,7 +1,9 @@
 import Http from "../Http";
 
 const config = {
-    server: "http://localhost:8085",
+    server: "https://192.168.0.105:8085",
+    peerServer: "/",
+    peerPort: 8086,
     apiParent: "api",
 };
 

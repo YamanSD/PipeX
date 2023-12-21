@@ -74,38 +74,48 @@ const HomeScreen = ({setShowNavBar}: Properties) => {
     }, [location.pathname, setShowNavBar]);
 
     const onJoin = () => {
-        Emitter.joinSession(session, password, (res) => {
-            const data = res.result;
+        const myPeer = Emitter.refreshPeer();
+        const user = LocalStorage.getUser();
 
-            if (res.response === Http.OK && data) {
-                if (data.isChat) {
-                    navigation(`/webchat`, {
-                        state: {
-                            sessionId: session,
-                            sessionPassword: password,
-                            create: false,
-                            initUsers: data.users
-                        }
-                    });
+        if (!user) {
+            toast.warn("No user");
+            return;
+        }
+
+        myPeer.on('open', () => {
+            Emitter.joinSession(session, password, (res) => {
+                const data = res.result;
+
+                if (res.response === Http.OK && data) {
+                    if (data.isChat) {
+                        navigation(`/webchat`, {
+                            state: {
+                                sessionId: session,
+                                sessionPassword: password,
+                                create: false,
+                                initUsers: data.users
+                            }
+                        });
+                    } else {
+                        navigation(`/conference`, {
+                            state: {
+                                sessionId: session,
+                                sessionPassword: password,
+                                create: false,
+                                initUsers: data.users
+                            }
+                        });
+                    }
+
+                    setSession("");
+                    setPassword("");
                 } else {
-                    navigation(`/conference/true/true`, {
-                        state: {
-                            sessionId: session,
-                            sessionPassword: password,
-                            create: false,
-                            initUsers: data.users
-                        }
+                    setBadParams(true);
+                    toast.error(`${JSON.stringify(res.err)}`, {
+                        toastId: "err3"
                     });
                 }
-
-                setSession("");
-                setPassword("");
-            } else {
-                setBadParams(true);
-                toast.error(`${JSON.stringify(res.err)}`, {
-                    toastId: "err3"
-                });
-            }
+            });
         });
     };
 

@@ -3,10 +3,16 @@ import Event from "./Event";
 import * as LocalStorage from '../storage/LocalStorage';
 import config, {EmitterCallback} from "./config";
 import Http from "../Http";
+import Peer from "peerjs";
+import {toast} from "react-toastify";
+import {UserPreference} from "../../components";
 
 
 /* user socket instance used to communicate with the server */
 let socket: Socket | undefined = undefined;
+
+/* PeerJS connection instance */
+let myPeer: Peer | undefined = undefined;
 
 /**
  * @param user to check.
@@ -68,6 +74,54 @@ function connect(): Socket {
 }
 
 /**
+ * @returns a new peer object.
+ */
+function connectPeer(): Peer {
+    const user = LocalStorage.getUser();
+    let id: string;
+
+    if (!user) {
+        id = '';
+    } else {
+        id = user.uid.split("")
+            .map(c => c.charCodeAt(0).toString(16).padStart(2, "0"))
+            .join("");
+    }
+
+    const result = new Peer(
+        id,
+        {
+            host: `${config.peerServer}`,
+            port: config.peerPort,
+            secure: true
+        }
+    );
+
+    result.on('error', (err) => {
+        toast.error(`Error in peer connection! ${err}`, {
+            autoClose: false
+        });
+    });
+
+    return result;
+}
+
+/**
+ * Creates a peer object if one does not exist and returns it.
+ */
+export function refreshPeer(): Peer {
+    /* if myPeer is defined */
+    if (myPeer) {
+        return myPeer;
+    }
+
+    /* try to connect */
+    myPeer = connectPeer();
+
+    return myPeer;
+}
+
+/**
  * Resets the user socket instance.
  */
 export function refreshSocket(): Socket {
@@ -78,7 +132,6 @@ export function refreshSocket(): Socket {
 
     /* try to connect */
     socket = connect();
-
 
     return socket;
 }
@@ -100,10 +153,18 @@ function emit(event: Event,
 
 /**
  * Type alias for the response of the join function.
+ *
+ * Users object keys are the peerId in P2P conferences, and
+ * uid in WebChats.
  */
 type JoinResponse = {
-    users: {[uid: string]: {audio: boolean, video: boolean}},
-    isChat: boolean
+    users: {[peerIdOrUid: string]: {
+        preferences: UserPreference,
+        peerId: string,
+        uid: string
+    }},
+    isChat: boolean,
+    creator: string,
 }
 
 /**
@@ -116,10 +177,10 @@ export function joinSession(sessionId: string,
                             callback: EmitterCallback<JoinResponse>): void {
     const user = LocalStorage.getUser();
 
-    if (!user || user.currentRoom) {
+    if (!user || user.currentRoom && user.currentRoom !== sessionId) {
         callback({
             response: Http.BAD,
-            err: "already in a room"
+            err: "Already in a room"
         });
         return;
     }
@@ -223,10 +284,11 @@ export function terminateSession(password: string,
 }
 
 /**
- * @param value true to mute user, false to unmute.
+ * @param value new media value.
  * @param callback callback response function.
  */
-export function mute(value: boolean, callback: EmitterCallback): void {
+export function updatePreference(value: {audio: boolean, video: boolean, screen: boolean},
+                                 callback: EmitterCallback): void {
     const user = LocalStorage.getUser();
 
     if (checkUserInSession(user, callback) || !user) {
@@ -234,7 +296,7 @@ export function mute(value: boolean, callback: EmitterCallback): void {
     }
 
     emit(
-        Event.MUTE,
+        Event.PREFERENCE,
         callback,
         {
             uid: user.uid,
@@ -245,10 +307,9 @@ export function mute(value: boolean, callback: EmitterCallback): void {
 }
 
 /**
- * @param value true to hide user camera, false to show.
  * @param callback callback response function.
  */
-export function hide(value: boolean, callback: EmitterCallback): void {
+export function ready(callback: EmitterCallback): void {
     const user = LocalStorage.getUser();
 
     if (checkUserInSession(user, callback) || !user) {
@@ -256,11 +317,11 @@ export function hide(value: boolean, callback: EmitterCallback): void {
     }
 
     emit(
-        Event.HIDE,
+        Event.READY,
         callback,
         {
             uid: user.uid,
-            value: value,
+            token: user.token,
             sessionToken: user.currentRoom
         }
     );
@@ -293,52 +354,4 @@ export function sendMsg(msg: string,
     );
 }
 
-/**
- * @param signal to be sent.
- * @param target ID of the recipient user.
- * @param callback callback response function.
- */
-export function sendSignal(signal: any, target: string, callback: EmitterCallback) {
-    const user = LocalStorage.getUser();
 
-    /* check if there is a user or user is not in a room */
-    if (checkUserInSession(user, callback) || !user) {
-        return;
-    }
-
-    emit(
-        Event.SEND_SIGNAL,
-        callback,
-        {
-            signal: signal,
-            target: target,
-            sender: user.uid,
-            sessionToken: user.currentRoom
-        }
-    );
-}
-
-/**
- * @param signal to be sent.
- * @param sender ID of the signal sender user.
- * @param callback callback response function.
- */
-export function sendReturn(signal: any, sender: string, callback: EmitterCallback) {
-    const user = LocalStorage.getUser();
-
-    /* check if there is a user or user is not in a room */
-    if (checkUserInSession(user, callback) || !user) {
-        return;
-    }
-
-    emit(
-        Event.RETURN_SIGNAL,
-        callback,
-        {
-            signal: signal,
-            target: sender,
-            sender: user.uid,
-            sessionToken: user.currentRoom
-        }
-    );
-}

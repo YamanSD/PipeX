@@ -1,3 +1,5 @@
+import {UserPreference} from "../../components";
+
 /**
  * Type alias for the user JSON object stored in
  * the local storage.
@@ -10,6 +12,7 @@ export type User = {
     currentRoom?: string,
     token: string,
     uid: string,
+    preferences?: UserPreference,
     isConnected: boolean,
 }
 
@@ -20,6 +23,14 @@ const UserKey: string = "UserInfo";
  * @param user new user data to be saved.
  */
 export function setUser(user: User): void {
+    if (!user.preferences) {
+        user.preferences = {
+            audio: false,
+            video: false,
+            screen: false,
+        };
+    }
+
     sessionStorage.setItem(UserKey, JSON.stringify(user));
 }
 

@@ -2,17 +2,15 @@
  * Enum class for the socket.io events.
  * Provides better maintainability.
  *
- * >- CONNECTION: user connected.
- * >- DISCONNECT: user disconnected.
+ * >- DISCONNECT: a user disconnected.
+ * >- CONNECT: a user connected.
  * >- MSG: used to send messages.
- * >- JOIN: user joined.
- * >- LEAVE: user left.
- * >- CREATE: user wants to create a session.
- * >- HIDE: user changed their camera status.
- * >- MUTE: user changed their mic status.
- * >- TERMINATE: user terminated their session.
- * >- SEND_SIGNAL: user sent a WebRTC signal.
- * >- RETURN_SIGNAL: forward WebRTC signal to another user.
+ * >- JOIN: a user joined.
+ * >- LEAVE: a user left.
+ * >- CREATE: a user wants to create a session.
+ * >- PREFERENCE: a user changed their preferences.
+ * >- TERMINATE: a user terminated their session.
+ * >- READY: a user is ready to initiate a call.
  */
 enum Event {
     CONNECTION = "connection",
@@ -22,10 +20,8 @@ enum Event {
     JOIN = "join",
     LEAVE = "leave",
     TERMINATE = "terminate",
-    MUTE = "mute",
-    HIDE = "hide",
-    SEND_SIGNAL = "send_signal",
-    RETURN_SIGNAL = "return_signal"
+    PREFERENCE = "preference",
+    READY = "ready"
 }
 
 export default Event;

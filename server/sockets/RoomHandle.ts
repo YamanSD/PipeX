@@ -218,7 +218,7 @@ export default class RoomHandle {
         /* broadcast to all users */
         this.io.to(this.roomId).emit(Event.JOIN, {
             uid: uid,
-            peerId: this.toHex(uid),
+            peerId: this.toPeerId(uid),
             preferences: {...this.userMediaStatus[uid]}
         });
 
@@ -243,7 +243,7 @@ export default class RoomHandle {
         delete this.userMediaStatus[uid];
 
         /* broadcast to all users (except leaving) */
-        this.io.to(this.roomId).emit(Event.LEAVE, {uid: uid});
+        this.io.to(this.roomId).emit(Event.LEAVE, {uid: uid, peerId: this.toPeerId(uid)});
     }
 
     /**
@@ -310,12 +310,12 @@ export default class RoomHandle {
     }
 
     /**
-     * @param v to be converted to hex.
-     * @returns the hex encoding of v.
+     * @param uid to be converted to a peerId.
+     * @returns the peerId of the given userId.
      * @private
      */
-    private toHex(v: string): string {
-        return v.split("")
+    private toPeerId(uid: string): string {
+        return uid.split("")
             .map(c => c.charCodeAt(0).toString(16).padStart(2, "0"))
             .join("");
     }
@@ -384,11 +384,16 @@ export default class RoomHandle {
             return;
         }
 
-        const usersInfo = Object.keys(this.userMediaStatus).map(uid => {
-            return {
-                peerId: this.toHex(uid),
-                ...this.userMediaStatus[uid]
-            }
+        const usersInfo: any = {};
+
+        Object.keys(this.userMediaStatus).forEach(uid => {
+            const peerId = this.toPeerId(uid);
+
+            usersInfo[this.isChat ? uid : peerId] = {
+                preferences: this.userMediaStatus[uid],
+                uid: uid,
+                peerId: peerId,
+            };
         });
 
         /* inform user that join is successful, and return list of users */
@@ -441,7 +446,7 @@ export default class RoomHandle {
 
         /* broadcast readiness to all */
         this.io.in(this.roomId).emit(Event.READY, {
-            uid: uid
+            peerId: this.toPeerId(uid)
         });
 
         callback({ response: Http.OK });
@@ -555,8 +560,9 @@ export default class RoomHandle {
         this.userMediaStatus[uid] = value;
 
         this.io.to(this.roomId).emit(Event.PREFERENCE, {
-                uid: uid,
-                value: value
+            uid: uid,
+            peerId: this.toPeerId(uid),
+            value: value
         });
 
         callback({ response: Http.OK });

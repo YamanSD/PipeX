@@ -4,7 +4,8 @@ import {
     BoxContainer,
     FormContainer,
     Input,
-    LineText, PasswordInput,
+    LineText,
+    PasswordInput,
     SubmitButton,
 } from "./common";
 import { Separator } from "../index";

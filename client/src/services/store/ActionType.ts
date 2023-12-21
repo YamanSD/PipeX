@@ -8,6 +8,7 @@ enum ActionType {
     SetUser = "SET_USER",
     UpdateUser = "UPDATE_USER",
     UpdateParticipant = "UPDATE_PARTICIPANT",
+    SetPeers = "SET_PEERS"
 }
 
 export default ActionType;

@@ -57,7 +57,7 @@ const HomeScreen = ({setShowNavBar}: Properties) => {
         if (user && user.currentRoom) {
             Emitter.leaveSession((res) => {
                 if (res.response === Http.OK) {
-                    toast.success("Left the chat room", {
+                    toast.success("Left the session", {
                         toastId: 'leftSucc2',
                     });
                 } else {
@@ -92,7 +92,7 @@ const HomeScreen = ({setShowNavBar}: Properties) => {
                             state: {
                                 sessionId: session,
                                 sessionPassword: password,
-                                create: false,
+                                creator: data.creator,
                                 initUsers: data.users
                             }
                         });
@@ -101,7 +101,7 @@ const HomeScreen = ({setShowNavBar}: Properties) => {
                             state: {
                                 sessionId: session,
                                 sessionPassword: password,
-                                create: false,
+                                creator: data.creator,
                                 initUsers: data.users
                             }
                         });

@@ -88,9 +88,6 @@ const ConferenceInfoScreen = ({setShowNavBar}: Properties) => {
 
                 Emitter.createSession(pass, false, (res) => {
                     if (res.response === Http.OK) {
-                        toast.info(`${res.result}`, {autoClose: false});
-                        toast.info('helper', {autoClose: false});
-
                         navigation("/conference", {
                             state: {
                                 sessionId: res.result,

@@ -6,13 +6,14 @@ import reportWebVitals from './reportWebVitals';
 import { ToastContainer } from "react-toastify";
 import { Provider } from "react-redux";
 import {configureStore} from "@reduxjs/toolkit";
-import { UserReducer } from "./services";
+import { UserReducer, PeersReducer } from "./services";
 
 
 /* Redux store */
 export const store = configureStore({
     reducer: {
-        user: UserReducer
+        user: UserReducer,
+        knownPeers: PeersReducer
     },
     middleware: (getDefaultMiddleware) => {
         return getDefaultMiddleware({

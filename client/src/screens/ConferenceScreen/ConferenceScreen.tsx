@@ -1,7 +1,7 @@
 import React, {useEffect, useRef, useState} from "react";
 import {
     Component,
-    Generic,
+    Generic, KnownPeers,
     MeetingFooter,
     ParticipantGrid,
     StateSetter,
@@ -13,6 +13,7 @@ import {connect} from "react-redux";
 import {Emitter, Http, Listener, LocalStorage, RootState, updateUser, UserType} from "../../services";
 import {toast} from "react-toastify";
 import {useLocation, useNavigate} from "react-router-dom";
+import {setKnownPeers} from "../../services/store/ActionCreator";
 
 /**
  * Type alias for the component props.
@@ -32,10 +33,23 @@ const ConferenceScreen = (props: Properties) => {
     const hasLoaded = useRef(false);
     const locationState = location.state as {
         sessionId: number | string,
-        create: boolean,
+        creator: string,
         sessionPassword?: string,
         initUsers: {[uid: string]: any}
     };
+
+    const setVideo = (stream: MediaStream, value: boolean) => {
+        stream.getVideoTracks()[0].enabled = value;
+    };
+
+    const setAudio = async (stream: MediaStream, value: boolean) => {
+        stream.getAudioTracks()[0].enabled = value;
+        await stream.getAudioTracks()[0].applyConstraints({
+            noiseSuppression: true,
+            echoCancellation: true,
+        });
+    };
+
 
     /* on termination listener */
     useEffect(() => {
@@ -59,14 +73,6 @@ const ConferenceScreen = (props: Properties) => {
         props.setShowNavBar(false);
     }, [location.pathname, props.setShowNavBar]);
 
-    const setVideo = (stream: MediaStream, value: boolean) => {
-        stream.getVideoTracks()[0].enabled = value;
-    };
-
-    const setAudio = (stream: MediaStream, value: boolean) => {
-        stream.getAudioTracks()[0].enabled = value;
-    };
-
     useEffect(() => {
         if (!hasLoaded.current) {
             hasLoaded.current = true;
@@ -76,8 +82,9 @@ const ConferenceScreen = (props: Properties) => {
                 audio: true
             }).then((stream) => {
                 setVideo(stream, props.currentUser.preferences.video);
-                setAudio(stream, props.currentUser.preferences.audio);
-                setMyStream(stream);
+                setAudio(stream, props.currentUser.preferences.audio).then(() => {
+                    setMyStream(stream);
+                });
             });
         }
     }, []);
@@ -102,9 +109,13 @@ const ConferenceScreen = (props: Properties) => {
         });
     };
 
+    const onLeaveClick = () => {
+        navigation("/home");
+    };
+
     const onMicClick = async (micEnabled: boolean) => {
         if (myStream) {
-            setAudio(myStream, micEnabled);
+            await setAudio(myStream, micEnabled)
             props.updateUser({ audio: micEnabled });
 
             return await updatePreferences({
@@ -116,7 +127,9 @@ const ConferenceScreen = (props: Properties) => {
     };
     const onVideoClick = async (videoEnabled: boolean) => {
         if (myStream) {
-            setVideo(myStream, videoEnabled);
+            if (!props.currentUser.preferences.screen) {
+                setVideo(myStream, videoEnabled);
+            }
             props.updateUser({ video: videoEnabled });
 
             return await updatePreferences({
@@ -131,66 +144,26 @@ const ConferenceScreen = (props: Properties) => {
         participantRef.current = props.participants;
     }, [props.participants]);
 
-    const updateStream = (stream: MediaStream) => {
-        // for (let key in participantRef.current) {
-        //     const sender = participantRef.current[key];
-        //     if (sender.isCurrent) continue;
-        //     const peerConnection = sender.peerConnection
-        //         .getSenders()
-        //         .find((s: RTCRtpSender) => (s.track ? s.track.kind === "video" : false));
-        //
-        //     peerConnection.replaceTrack(stream.getVideoTracks()[0]);
-        // }
-        // setMyStream(stream);
-    };
-
-    const onScreenShareEnd = async () => {
-        // const localStream = await navigator.mediaDevices.getUserMedia({
-        //     audio: true,
-        //     video: true,
-        // });
-        //
-        // // @ts-ignore
-        // localStream.getVideoTracks()[0].enabled = Object.values(
-        //     props.currentUser
-        // )[0].video;
-        //
-        // updateStream(localStream);
-        //
-        // props.updateUser({ screen: false });
-    };
-
     const onScreenClick = async (value: boolean) => {
-        // let mediaStream;
-        //
-        // // @ts-ignore
-        // if (navigator.getDisplayMedia) {
-        //     // @ts-ignore
-        //     mediaStream = await navigator.getDisplayMedia({ video: true });
-        // } else if (navigator.mediaDevices.getDisplayMedia) {
-        //     mediaStream = await navigator.mediaDevices.getDisplayMedia({
-        //         video: true,
-        //     });
-        // } else {
-        //     mediaStream = await navigator.mediaDevices.getUserMedia({
-        //         // @ts-ignore
-        //         video: { mediaSource: "screen" },
-        //     });
-        // }
-        //
-        // mediaStream.getVideoTracks()[0].onended = onScreenShareEnd;
-        //
-        // updateStream(mediaStream);
-        //
-        // props.updateUser({ screen: true });
-        return await updatePreferences({
-            screen: value
-        });
-    };
+        if (myStream) {
+            props.updateUser({ screen: value });
+
+            return await updatePreferences({
+                screen: value
+            });
+        }
+
+        return false;
+    }
+
     return (
-        <div className="wrapper">
+        <div className="wrapper" style={{
+            padding: 0,
+            margin: 0,
+        }}>
             <div className="main-screen">
                 <ParticipantGrid locationState={locationState}
+                                 setMyStream={setMyStream}
                                  myStream={myStream as MediaStream}
                 />
             </div>
@@ -201,6 +174,12 @@ const ConferenceScreen = (props: Properties) => {
                     onScreenClick={onScreenClick}
                     onMicClick={onMicClick}
                     onVideoClick={onVideoClick}
+                    ConferenceInfo={{
+                        creator: locationState.creator ?? LocalStorage.getUser()?.uid ?? "err",
+                        password: locationState.sessionPassword ?? "",
+                        sessionId: `${locationState.sessionId}`,
+                    }}
+                    onLeaveClick={onLeaveClick}
                 />
             </div>
         </div>
@@ -211,11 +190,13 @@ const mapStateToProps = (state: RootState) => {
     return {
         participants: state.user.participants,
         currentUser: state.user.currentUser,
+        peers: state.knownPeers.peers
     };
 };
 
 const mapDispatchToProps = (dispatch: (_: any) => any) => {
     return {
+        setPeers: (peers: KnownPeers) => dispatch(setKnownPeers(peers)),
         updateUser: (user: any) => dispatch(updateUser(user)),
     };
 };

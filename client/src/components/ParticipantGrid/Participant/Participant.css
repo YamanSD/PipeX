@@ -1,12 +1,11 @@
-
-
-  .video{
+.video{
     background-color: #353b48;
     height: 100%;
     width: 100%;
     position: relative;
     object-fit: cover;
     border-radius: 5px;
+    border: 1px solid #3498ff;
   }
 
   .participant {
@@ -23,7 +22,7 @@
     right: 10px;
     position: absolute;
     top: 10px;
-    background: #353b48;
+    background: transparent;
     border-radius: 50%;
     height: 22px;
     width: 22px!important;
@@ -31,6 +30,10 @@
 
   .hide {
     display: none;
+  }
+
+  .speaking {
+    border: 4px solid #3498ff;
   }
 
   .avatar {
@@ -50,6 +53,10 @@
   }
 
   .name {
+    background-color: #202124AA;
+    border: 1px dashed #3498ff;
+    padding: 8px;
+    border-radius: 15px;
     color: white;
     bottom: 10px;
     position: absolute;

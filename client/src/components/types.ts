@@ -1,4 +1,5 @@
 import React from "react";
+import {MediaConnection} from "peerjs";
 
 /**
  * Generic component type.
@@ -42,3 +43,12 @@ export type UserPeerInfo = {
     preferences: UserPreference,
     peerId: string
 };
+
+/**
+ * Type alias for the peers' container.
+ */
+export type KnownPeers = {[uid: string]: {
+    call?: MediaConnection,
+    stream?: MediaStream,
+    data: UserPeerInfo
+}};

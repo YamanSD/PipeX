@@ -1,4 +1,5 @@
 .meeting-footer{
+    border-top: 1px solid #3498ff;
     background: #202124; 
     height: 100%;
     width: 100%;
@@ -16,17 +17,56 @@
     height: 40px;
     margin: 10px;
     display: flex;
+    transition: background-color 0.5s;
     align-items: center;
     justify-content: center;
     cursor: pointer;
 }
 
+.leave-btn {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    border-radius: 10px;
+}
+
+.active-blue {
+    background-color: #3498ff;
+}
+
 .active {
-  background-color:   #ea4335;
+  background-color: #ea4335;
 }
 
 div[disabled]
 {
   pointer-events: none;
   opacity: 0.3;
+}
+
+.modal {
+    background-color: black;
+}
+
+@keyframes anvil {
+    0% {
+        transform: scale(1) translateY(0px);
+        opacity: 0;
+        box-shadow: 0 0 0 rgba(241, 241, 241, 0);
+    }
+    1% {
+        transform: scale(0.96) translateY(10px);
+        opacity: 0;
+        box-shadow: 0 0 0 rgba(241, 241, 241, 0);
+    }
+    100% {
+        transform: scale(1) translateY(0px);
+        opacity: 1;
+        box-shadow: 0 0 500px rgba(241, 241, 241, 0);
+    }
+}
+.popup-content {
+    background: transparent;
+    border: none;
+    -webkit-animation: anvil 0.3s cubic-bezier(0.38, 0.1, 0.36, 0.9) forwards;
 }

@@ -3,6 +3,7 @@ export * as Emitter from './socket-api/Emitter';
 export * as Listener from './socket-api/Listener';
 export * as ApiGateway from './socket-api/Gateway';
 export { default as UserReducer } from './store/UserReducer';
+export { default as PeersReducer } from './store/PeersReducer';
 export {
     addParticipant,
     removeParticipant,

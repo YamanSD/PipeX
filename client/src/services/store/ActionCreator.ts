@@ -1,6 +1,6 @@
-import UserAction from "./ActionType";
+import ActionType from "./ActionType";
 import {store} from "../../index";
-import {UserPreference} from "../../components";
+import {KnownPeers, UserPreference} from "../../components";
 
 /* type alias for the state type */
 export type RootState = ReturnType<typeof store.getState>
@@ -13,8 +13,15 @@ export type StateType = {
     participants: {[uid: string]: UserType} | null,
 };
 
+/*
+ * Type alias for the state type of the PeersReducer.
+ */
+export type PeerStateType = {
+    peers?: KnownPeers
+};
+
 /* type alias for the UserReducer action type */
-export type ActionInputType = {type: UserAction, payload?: any};
+export type ActionInputType<T = any> = {type: ActionType, payload?: T};
 
 /*
  * Default user state.
@@ -22,6 +29,13 @@ export type ActionInputType = {type: UserAction, payload?: any};
 export const defaultUserState: StateType = {
     participants: {},
     currentUser: null
+};
+
+/*
+ * Default peer state.
+ */
+export const defaultPeerState: PeerStateType = {
+    peers: undefined
 };
 
 /* Type alias for the user type */
@@ -41,7 +55,7 @@ export type UserType = {
  */
 export const setUser = (user: UserType) => {
     return {
-        type: UserAction.SetUser,
+        type: ActionType.SetUser,
         payload: {
             currentUser: user,
         },
@@ -49,11 +63,23 @@ export const setUser = (user: UserType) => {
 };
 
 /**
+ * @param peers
+ */
+export const setKnownPeers = (peers: KnownPeers) => {
+    return {
+        type: ActionType.SetPeers,
+        payload: {
+            peers: peers
+        }
+    };
+}
+
+/**
  * @param user
  */
 export const addParticipant = (user: UserType) => {
     return {
-        type: UserAction.AddParticipant,
+        type: ActionType.AddParticipant,
         payload: {
             newUser: user,
         },
@@ -65,7 +91,7 @@ export const addParticipant = (user: UserType) => {
  */
 export const updateUser = (newPrefs: UserPreference) => {
     return {
-        type: UserAction.UpdateUser,
+        type: ActionType.UpdateUser,
         payload: {
             newPrefs: newPrefs,
         },
@@ -77,7 +103,7 @@ export const updateUser = (newPrefs: UserPreference) => {
  */
 export const updateParticipant = (user: UserType) => {
     return {
-        type: UserAction.UpdateParticipant,
+        type: ActionType.UpdateParticipant,
         payload: {
             newUser: user,
         },
@@ -89,7 +115,7 @@ export const updateParticipant = (user: UserType) => {
  */
 export const removeParticipant = (uid: string) => {
     return {
-        type: UserAction.RemoveParticipant,
+        type: ActionType.RemoveParticipant,
         payload: {
             id: uid,
         },

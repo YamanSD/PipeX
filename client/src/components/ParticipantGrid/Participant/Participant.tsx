@@ -1,9 +1,8 @@
-import React, {useEffect, useRef} from "react";
-import { Surface } from "../../index";
-import { faMicrophoneSlash } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import React, {useEffect, useRef, useState} from "react";
+import {Surface} from "../../index";
+import {faMicrophoneSlash} from "@fortawesome/free-solid-svg-icons";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import "./Participant.css";
-import {toast} from "react-toastify";
 
 /**
  * Type alias for the Participant component.
@@ -36,20 +35,59 @@ export const Participant = ({
         stream
 }: Properties) => {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const [isSpeaking, setIsSpeaking] = useState(false);
 
     useEffect(() => {
         if (videoRef.current && stream) {
-            toast.info(`SET STREAM; ${username} || ${stream.id}`, {autoClose: false})
+            // Adjust this threshold to suit your needs
+            const VOLUME_THRESHOLD = 20;
+            const AUDIO_WINDOW_SIZE = 256;
+
             videoRef.current.srcObject = stream;
+
+            // @ts-ignore, webkit for Safari
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const mediaStreamSource = audioContext.createMediaStreamSource(stream);
+
+            // Create an analyser node to process audio data
+            const analyserNode = audioContext.createAnalyser();
+            // Window size in samples that is used when performing a Fast Fourier Transform (FFT),
+            // to get frequency domain data
+            analyserNode.fftSize = AUDIO_WINDOW_SIZE;
+            mediaStreamSource.connect(analyserNode);
+
+            // Buffer to hold the audio data
+            const bufferLength = analyserNode.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            // Function to process audio data and detect the active speaker
+            const processAudio = () => {
+                analyserNode.getByteFrequencyData(dataArray);
+
+                // Implement your active speaker detection algorithm here
+                // For example, you can calculate the average volume of the audio data and use a threshold
+
+                // Example: Calculate the average volume
+                const averageVolume = dataArray.reduce((acc, val) => acc + val, 0) / bufferLength;
+                setIsSpeaking(averageVolume > VOLUME_THRESHOLD);
+
+                // Repeat the process for the next audio frame
+                requestAnimationFrame(processAudio);
+            };
+
+            // Start the audio processing loop
+            processAudio();
         }
     }, [videoRef.current, stream]);
 
     return (
-        <div className={`participant ${preferences.screen ? "hide" : ""}`}>
+        <div
+            key={`${username}${currentIndex}`}
+            className={`participant`}>
             <Surface>
                 <video
                     ref={videoRef}
-                    className="video"
+                    className={`video ${isSpeaking ? "speaking" : ""}`}
                     id={`participantVideo${currentIndex}`}
                     autoPlay
                     playsInline
@@ -62,7 +100,7 @@ export const Participant = ({
                         title="Muted"
                     />
                 )}
-                {!preferences.video && (
+                {!preferences.video && !preferences.screen && (
                     <div
                         style={{ background: '#3498ff' }}
                         className="avatar"
@@ -72,7 +110,7 @@ export const Participant = ({
                 )}
                 <div className="name">
                     {username}
-                    {isCurrent ? "(You)" : ""}
+                    {isCurrent ? " (You)" : ""}
                 </div>
             </Surface>
         </div>

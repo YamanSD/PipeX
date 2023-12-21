@@ -2,6 +2,8 @@ import React, {useEffect, useRef, useState} from "react";
 import {Surface} from "../../index";
 import {faMicrophoneSlash} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import Popup from 'reactjs-popup';
+import 'reactjs-popup/dist/index.css';
 import "./Participant.css";
 
 /**
@@ -35,6 +37,7 @@ export const Participant = ({
         stream
 }: Properties) => {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const largeVideoRef = useRef<HTMLVideoElement>(null);
     const [isSpeaking, setIsSpeaking] = useState(false);
 
     useEffect(() => {
@@ -81,38 +84,67 @@ export const Participant = ({
     }, [videoRef.current, stream]);
 
     return (
-        <div
-            key={`${username}${currentIndex}`}
-            className={`participant`}>
-            <Surface>
+        <Popup
+            modal
+            onOpen={() => {
+                if (largeVideoRef.current && stream) {
+                    largeVideoRef.current.srcObject = stream;
+                }
+            }}
+            position={"top left"}
+            trigger={
+                <div
+                    key={`${username}${currentIndex}`}
+                    className={`participant`}>
+                    <Surface>
+                        <video
+                            ref={videoRef}
+                            className={`video ${isSpeaking ? "speaking" : ""}`}
+                            id={`participantVideo${currentIndex}`}
+                            autoPlay
+                            playsInline
+                            muted={isCurrent}
+                        />
+                        {!preferences.audio && (
+                            <FontAwesomeIcon
+                                className="muted"
+                                icon={faMicrophoneSlash}
+                                title="Muted"
+                            />
+                        )}
+                        {!preferences.video && !preferences.screen && (
+                            <div
+                                style={{ background: '#3498ff' }}
+                                className="avatar"
+                            >
+                                {username[0]}
+                            </div>
+                        )}
+                        <div className="name">
+                            {username}
+                            {isCurrent ? " (You)" : ""}
+                        </div>
+                    </Surface>
+                </div>
+            }
+        >
+            <div
+                id={`zoomin ${username}${currentIndex}`}
+                style={{
+                    position: "relative",
+                    right: "5%",
+                    width: "110%",
+                    height: "auto",
+                }}>
                 <video
-                    ref={videoRef}
+                    ref={largeVideoRef}
                     className={`video ${isSpeaking ? "speaking" : ""}`}
-                    id={`participantVideo${currentIndex}`}
+                    id={`largeParticipantVideo${currentIndex}`}
                     autoPlay
                     playsInline
                     muted={isCurrent}
                 />
-                {!preferences.audio && (
-                    <FontAwesomeIcon
-                        className="muted"
-                        icon={faMicrophoneSlash}
-                        title="Muted"
-                    />
-                )}
-                {!preferences.video && !preferences.screen && (
-                    <div
-                        style={{ background: '#3498ff' }}
-                        className="avatar"
-                    >
-                        {username[0]}
-                    </div>
-                )}
-                <div className="name">
-                    {username}
-                    {isCurrent ? " (You)" : ""}
-                </div>
-            </Surface>
-        </div>
+            </div>
+        </Popup>
     );
 };

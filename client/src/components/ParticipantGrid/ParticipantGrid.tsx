@@ -15,7 +15,7 @@ import {
 } from "../../services";
 import {toast} from "react-toastify";
 import Peer from "peerjs";
-import {Component, KnownPeers, StateSetter, UpdatePreferences, UserPeerInfo} from "../types";
+import {Component, KnownPeers, StateSetter, UserPeerInfo} from "../types";
 import {Participant} from "./Participant/Participant";
 import {setKnownPeers} from "../../services/store/ActionCreator";
 
@@ -279,7 +279,7 @@ const ParticipantGrid = ({
                     }
                 } catch (e) {
                     isSharing.current = false;
-                    updateUser({ screen: false, video: true });
+                    updateUser({ screen: false });
                     return;
                 }
 

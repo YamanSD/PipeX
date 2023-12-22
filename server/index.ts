@@ -21,8 +21,8 @@ const port = Number(process.env.APP_PORT);
 const apiParent = '/api';
 
 /* SSL params */
-const privateKey = fs.readFileSync(`${__dirname}/cert.key`).toString();
-const certificate = fs.readFileSync(`${__dirname}/cert.crt`).toString();
+const privateKey = fs.readFileSync(`${__dirname}/../cert.key`).toString();
+const certificate = fs.readFileSync(`${__dirname}/../cert.crt`).toString();
 
 /* express API instance */
 const app = express();

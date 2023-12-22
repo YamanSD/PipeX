@@ -21,8 +21,8 @@ const port = Number(process.env.APP_PORT);
 const apiParent = '/api';
 
 /* SSL params */
-const privateKey = fs.readFileSync(`${__dirname}/../cert.key`).toString();
-const certificate = fs.readFileSync(`${__dirname}/../cert.crt`).toString();
+const privateKey = fs.readFileSync(`${__dirname}/../cert.key`);
+const certificate = fs.readFileSync(`${__dirname}/../cert.crt`);
 
 /* express API instance */
 const app = express();
@@ -37,8 +37,8 @@ const server = createServer({
 PeerServer({
     port: Number(process.env.PEER_PORT),
     ssl: {
-        key: privateKey,
-        cert: certificate
+        key: privateKey.toString(),
+        cert: certificate.toString()
     }
 });
 
@@ -97,6 +97,6 @@ io.on(SocketEvent.CONNECT, (socket) => {
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 /* for testing purposes */
-server.listen(port, () => {
+server.listen(port, '0.0.0.0', () => {
     console.log(`Listening on https://localhost:${port}/`);
 });

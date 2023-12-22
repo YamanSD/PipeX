@@ -85,7 +85,9 @@ function App(props: Properties) {
 
     return (
       <BrowserRouter>
-        <div className="App">
+          <meta httpEquiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <div className="App">
             {
                 showNavBar
                 &&

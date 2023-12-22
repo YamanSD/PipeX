@@ -9,6 +9,8 @@ import {SocketEvent} from "./sockets";
 import 'dotenv';
 import {TokenValidator} from "./validations";
 import {PeerServer} from "peer";
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpecs from './swaggerConfig.json';
 import * as fs from "fs";
 
 
@@ -19,8 +21,8 @@ const port = Number(process.env.APP_PORT);
 const apiParent = '/api';
 
 /* SSL params */
-const privateKey = fs.readFileSync(`${__dirname}${process.env.APP_DEV === '0' ? '/..' : ''}/cert.key`).toString();
-const certificate = fs.readFileSync(`${__dirname}${process.env.APP_DEV === '0' ? '/..' : ''}/cert.crt`).toString();
+const privateKey = fs.readFileSync(`${__dirname}/cert.key`).toString();
+const certificate = fs.readFileSync(`${__dirname}/cert.crt`).toString();
 
 /* express API instance */
 const app = express();
@@ -91,6 +93,8 @@ io.on(SocketEvent.CONNECT, (socket) => {
         console.log("\n<<<\n", args, "\n:>>>");
     });
 });
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 /* for testing purposes */
 server.listen(port, () => {

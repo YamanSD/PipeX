@@ -1,0 +1,332 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "PipeX",
+        "description": "\nSimple swagger documentation page for PipeX's API.",
+        "version": "1.0.11"
+    },
+    "servers": [
+        {
+            "url": "https://localhost:8085/api"
+        }
+    ],
+    "tags": [
+        {
+            "name": "Sessions",
+            "description": "User sessions"
+        },
+        {
+            "name": "Users",
+            "description": "User info"
+        }
+    ],
+    "paths": {
+        "/sessions/sessionInfo": {
+            "post": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Retreive session information",
+                "description": "Retreives session info including chats visible to the creator and the attendee list.",
+                "operationId": "sessionInfo",
+                "requestBody": {
+                    "description": "Provide the session identifier",
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "sessionToken": {
+                                    "type": "object,",
+                                    "additionalProperties": {
+                                        "oneOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "integer"
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "session": [
+                                        {
+                                            "sessionNumber": 1014
+                                        },
+                                        {
+                                            "sessionDuration": "45000 (in ms)"
+                                        },
+                                        {
+                                            "createdAt": "14/12/2022 (Date object)"
+                                        }
+                                    ],
+                                    "chat": [
+                                        {
+                                            "sender": "y@gmail.com"
+                                        },
+                                        {
+                                            "receiver": "undefined"
+                                        },
+                                        {
+                                            "message": "public msg"
+                                        },
+                                        {
+                                            "timestamp": "14/12/2022 (Date object)"
+                                        }
+                                    ],
+                                    "attendees": [
+                                        {
+                                            "UserUid": 123
+                                        },
+                                        {
+                                            "UserUid": 100
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing session token.",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "err": {
+                                        "type": "string",
+                                        "description": "Error message"
+                                    },
+                                    "response": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid user token and/or not session creator."
+                    },
+                    "500": {
+                        "description": "Internal server error.",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "err": {
+                                        "type": "string",
+                                        "description": "Error message"
+                                    },
+                                    "response": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/userSessions": {
+            "post": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Retreive the list of user sessions",
+                "description": "Retreives the list of session ID numbers that belong to the sending user",
+                "operationId": "userSessions",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "example": [
+                                    {
+                                        "userSessions": [
+                                            1025,
+                                            1400
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid user token."
+                    },
+                    "500": {
+                        "description": "Internal server error.",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "err": {
+                                        "type": "string",
+                                        "description": "Error message"
+                                    },
+                                    "response": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/authenticate": {
+            "post": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "User sign-in",
+                "description": "Authenticates user and returns a token that can be used",
+                "operationId": "authenticate",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "example": [
+                                    {
+                                        "token": null,
+                                        "type": "string"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing email and/or password.",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "err": {
+                                        "type": "string",
+                                        "description": "Error message"
+                                    },
+                                    "response": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid email and/or password.",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "err": {
+                                        "type": "string",
+                                        "description": "Error message"
+                                    },
+                                    "response": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error.",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "err": {
+                                        "type": "string",
+                                        "description": "Error message"
+                                    },
+                                    "response": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/register": {
+            "post": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "User sign-up",
+                "description": "Registers user and returns a token that can be used",
+                "operationId": "register",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "example": [
+                                    {
+                                        "token": null,
+                                        "type": "string"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing email and/or password.",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "err": {
+                                        "type": "string",
+                                        "description": "Error message"
+                                    },
+                                    "response": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error.",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "err": {
+                                        "type": "string",
+                                        "description": "Error message"
+                                    },
+                                    "response": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    }
+}

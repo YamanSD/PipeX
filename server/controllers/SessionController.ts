@@ -156,6 +156,7 @@ export function attachListeners(io: Server, socket: Socket) {
     onPreferenceListener(io, socket);
     onMessageListener(io, socket);
     onReadyListener(io, socket);
+    onTranscriptListener(io, socket);
 }
 
 /**
@@ -354,6 +355,55 @@ function onMessageListener(io: Server, socket: Socket) {
 
         /* try to join the session, calls callback in case of failure or success */
         await listener.onMessage(socket, argsList, callback);
+    });
+}
+
+/**
+ * @param io socket.io server.
+ * @param socket socket instance.
+ */
+function onTranscriptListener(io: Server, socket: Socket) {
+    socket.on(SocketEvent.TRANSCRIPT, async (argsList: MessageArgs, callback: (args: {
+        response: Http,
+        err?: unknown,
+        result?: any
+    }) => any = () => {}) => {
+        const {message, sender, sessionToken, token} = argsList;
+
+        /* check for missing data */
+        if (!message || !sender || !sessionToken || !token) {
+            callback({
+                response: Http.BAD,
+                err: "missing sender, message, token, and/or session ID"
+            });
+            return;
+        }
+
+        const isValidUser = await checkUserToken(sender, token);
+
+        /* check if token is valid */
+        if (!isValidUser) {
+            callback({
+                response: Http.UNAUTHORIZED,
+                err: "Invalid token"
+            });
+            return;
+        }
+
+        /* get listener */
+        const listener = RoomHandle.getListener(sessionToken);
+
+        /* check listener */
+        if (!listener) {
+            callback({
+                response: Http.NOT_FOUND,
+                err: "session does not exist or has ended"
+            });
+            return;
+        }
+
+        /* try to join the session, calls callback in case of failure or success */
+        await listener.onTranscript(socket, argsList.message, argsList.sender, callback);
     });
 }
 

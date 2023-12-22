@@ -5,6 +5,7 @@ import {
     faShield,
     faVideo,
     faDesktop,
+    faClosedCaptioning,
     faVideoSlash,
     faMicrophoneSlash,
     faDoorOpen,
@@ -27,6 +28,7 @@ type Properties = {
     onVideoClick: (value: boolean) => Promise<boolean>,
     onScreenClick: (value: boolean) => Promise<boolean>,
     onLeaveClick: () => any,
+    onSubtitleClick: (value: boolean) => any,
     ConferenceInfo: {
         sessionId: string,
         password: string,
@@ -43,6 +45,7 @@ type Properties = {
 const MeetingFooter = (props: Properties) => {
     const [preferences, setPreferences] = useState({ ...props.initPreferences });
     const [hoverOnLeave, setHoverOnLeave] = useState(false);
+    const [activeSubtitles, setActiveSubtitles] = useState(false);
 
     const handleSetPreferences = (value: UpdatePreferences) => {
         setPreferences({ ...preferences, ...value });
@@ -126,6 +129,16 @@ const MeetingFooter = (props: Properties) => {
                 onClick={onScreenClick}
             >
                 <FontAwesomeIcon icon={faDesktop} />
+            </button>
+            <button
+                className={"meeting-icons " + (activeSubtitles ? "active-blue" : "")}
+                data-tip="Activate subtitles"
+                onClick={() => {
+                    props.onSubtitleClick(!activeSubtitles);
+                    setActiveSubtitles(!activeSubtitles);
+                }}
+            >
+                <FontAwesomeIcon icon={faClosedCaptioning} />
             </button>
             <Popup
                 className={"modal"}

@@ -1,7 +1,8 @@
 import React, {useEffect, useRef, useState} from "react";
 import {
-    Component,
-    Generic, KnownPeers,
+    Component, FadingText,
+    Generic,
+    KnownPeers,
     MeetingFooter,
     ParticipantGrid,
     StateSetter,
@@ -14,6 +15,8 @@ import {Emitter, Http, Listener, LocalStorage, RootState, updateUser, UserType} 
 import {toast} from "react-toastify";
 import {useLocation, useNavigate} from "react-router-dom";
 import {setKnownPeers} from "../../services/store/ActionCreator";
+import SpeechRecognition, {useSpeechRecognition} from 'react-speech-recognition';
+
 
 /**
  * Type alias for the component props.
@@ -37,6 +40,18 @@ const ConferenceScreen = (props: Properties) => {
         sessionPassword?: string,
         initUsers: {[uid: string]: any}
     };
+    const {
+        transcript,
+        browserSupportsSpeechRecognition
+    } = useSpeechRecognition();
+    const [activeCc, setActiveCc] = useState(false);
+    const transcripts = useRef<{sender: string, message: string}[]>([]);
+    const [renderTranscripts, setRenderTranscripts] = useState(transcripts.current);
+
+    /* warn user */
+    if (!browserSupportsSpeechRecognition) {
+        toast.warn("Browser doesn't support speech recognition. Others won't see your transcription.");
+    }
 
     const setVideo = (stream: MediaStream, value: boolean) => {
         stream.getVideoTracks()[0].enabled = value;
@@ -44,12 +59,28 @@ const ConferenceScreen = (props: Properties) => {
 
     const setAudio = async (stream: MediaStream, value: boolean) => {
         stream.getAudioTracks()[0].enabled = value;
+
+        if (value) {
+            SpeechRecognition.startListening({ continuous: true, language: 'en-US' });
+        } else {
+            SpeechRecognition.stopListening();
+        }
+
         await stream.getAudioTracks()[0].applyConstraints({
             noiseSuppression: true,
             echoCancellation: true,
         });
     };
 
+    useEffect(() => {
+        if (props.currentUser.preferences.audio && transcript) {
+            Emitter.sendTranscript(transcript, (res) => {
+                if (res.response !== Http.OK) {
+                    toast.error(`Couldn't send transcript! (${res.err})`);
+                }
+            });
+        }
+    }, [transcript, props.currentUser]);
 
     /* on termination listener */
     useEffect(() => {
@@ -89,6 +120,13 @@ const ConferenceScreen = (props: Properties) => {
         }
     }, []);
 
+    useEffect(() => {
+        Listener.onTranscript((args) => {
+            transcripts.current.push(args);
+            setRenderTranscripts([ ...transcripts.current ]);
+        });
+    }, []);
+
     const updatePreferences = async (newPref: UpdatePreferences) => {
         const actualPref: UserPreference = {
             ...props.currentUser.preferences,
@@ -107,6 +145,10 @@ const ConferenceScreen = (props: Properties) => {
                 }
             });
         });
+    };
+
+    const onSubtitlesClick = (value: boolean) => {
+        setActiveCc(value);
     };
 
     const onLeaveClick = () => {
@@ -161,15 +203,36 @@ const ConferenceScreen = (props: Properties) => {
             padding: 0,
             margin: 0,
         }}>
+            {
+                activeCc && <div id={"transcripts"}
+                     style={{
+                         pointerEvents: "none",
+                         width: "100%",
+                         display: "flex",
+                         flexDirection: "column-reverse",
+                         alignItems: "center",
+                         height: "100%",
+                         position: "absolute",
+                         top: "0",
+                         left: "0",
+                         zIndex: 500
+                     }}
+                >
+                    {renderTranscripts.map(t => <FadingText text={t.message} sender={t.sender} />)}
+                </div>
+            }
             <div className="main-screen">
                 <ParticipantGrid locationState={locationState}
                                  setMyStream={setMyStream}
                                  myStream={myStream as MediaStream}
+                                 setAudio={setAudio}
+                                 setVideo={setVideo}
                 />
             </div>
 
             <div className="footer">
                 <MeetingFooter
+                    onSubtitleClick={onSubtitlesClick}
                     initPreferences={props.currentUser?.preferences ?? {video: false, audio: false, screen: false}}
                     onScreenClick={onScreenClick}
                     onMicClick={onMicClick}

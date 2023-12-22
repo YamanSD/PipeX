@@ -28,6 +28,8 @@ type Properties = {
     currentUser: UserType,
     updateUser: (u: any) => any,
     setPeers: (peers: KnownPeers) => any,
+    setVideo: (stream: MediaStream, value: boolean) => any,
+    setAudio: (stream: MediaStream, value: boolean) => any,
     locationState: {
         sessionId: number | string,
         creator: string,
@@ -49,7 +51,9 @@ const ParticipantGrid = ({
      currentUser,
      locationState,
      setMyStream,
-     updateUser
+     updateUser,
+     setAudio,
+     setVideo
 }: Properties) => {
     const myPeer = useRef<Peer>(Emitter.refreshPeer());
     const [gridCol, setGridCol] = useState(0);
@@ -124,8 +128,6 @@ const ParticipantGrid = ({
     const removeUser = (peerId: string) => {
         if (knownPeers.current[peerId]) {
             knownPeers.current[peerId].call?.close();
-            toast.info(`${knownPeers.current[peerId].data.uid} left`);
-
             delete knownPeers.current[peerId];
             rerenderPeers(knownPeers.current);
         }
@@ -252,8 +254,8 @@ const ParticipantGrid = ({
                     video: true,
                 });
 
-                localStream.getVideoTracks()[0].enabled = preferences.current.video;
-                localStream.getAudioTracks()[0].enabled = preferences.current.audio;
+                setVideo(localStream, preferences.current.video);
+                setAudio(localStream, preferences.current.audio);
 
                 updateMyStream(localStream);
                 updateUser({ screen: false });
@@ -304,6 +306,7 @@ const ParticipantGrid = ({
             {
                 Object.keys(renderPeers).map((peerId, index) => {
                     return <Participant currentIndex={index}
+                                        key={`${peerId}${index}`}
                                         username={renderPeers[peerId].data.uid}
                                         preferences={renderPeers[peerId].data.preferences}
                                         isCurrent={renderPeers[peerId].data.uid === LocalStorage.getUser()?.uid}
@@ -342,7 +345,9 @@ const mapDispatchToProps = (dispatch: (...arg: any[]) => any) => {
 type InputProperties = {
     myStream: Properties['myStream'],
     locationState: Properties['locationState'],
-    setMyStream: Properties['setMyStream']
+    setMyStream: Properties['setMyStream'],
+    setAudio: Properties['setAudio'],
+    setVideo: Properties['setVideo']
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(ParticipantGrid) as Component<InputProperties>;

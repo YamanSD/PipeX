@@ -354,4 +354,26 @@ export function sendMsg(msg: string,
     );
 }
 
+/**
+ *
+ * @param message
+ * @param callback
+ */
+export function sendTranscript(message: string, callback: EmitterCallback): void {
+    const user = LocalStorage.getUser();
 
+    if (checkUserInSession(user, callback) || !user) {
+        return;
+    }
+
+    emit(
+        Event.TRANSCRIPT,
+        callback,
+        {
+            sender: user.uid,
+            token: user.token,
+            message: message,
+            sessionToken: user.currentRoom
+        }
+    );
+}

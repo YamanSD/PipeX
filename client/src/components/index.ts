@@ -5,5 +5,6 @@ export {default as Separator} from './Separator/Separator';
 export {default as AuthBox} from './AuthBox/AuthBox';
 export {default as MeetingFooter} from './MeetingFooter/MeetingFooter';
 export {default as ParticipantGrid} from './ParticipantGrid/ParticipantGrid';
+export {default as FadingText} from './FadingText/FadingText';
 export * as ScreenComponents from './ScreenComponents/Components';
 export * from './types';

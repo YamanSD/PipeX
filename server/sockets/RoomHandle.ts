@@ -607,6 +607,36 @@ export default class RoomHandle {
     }
 
     /**
+     * @param socket sender of the transcript.
+     * @param sender ID of the sending user.
+     * @param message to be sent.
+     * @param callback callback function.
+     */
+    public async onTranscript(socket: Socket, message: string, sender: string, callback: Callback) {
+        /*
+         * Check if sender is not connected.
+         */
+        if (!this.isConnected(sender)) {
+            callback({
+                response: Http.BAD,
+                err: "Sender is not connected"
+            });
+        }
+
+        /* emit the message */
+        socket.in(
+            this.roomId
+        ).emit(Event.TRANSCRIPT, {
+            message: message,
+            sender: sender,
+        });
+
+
+        /* success */
+        return { response: Http.OK };
+    }
+
+    /**
      * @param sender ID of the sending user.
      * @param message to be sent.
      * @param receiver ID of the receiving user. Sends to everyone if undefined.

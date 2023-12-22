@@ -1,0 +1,16 @@
+.fading-text {
+    opacity: 1;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+    margin-bottom: 5px;
+    align-items: center;
+    padding: 5px;
+    background-color: #3c4043BB;
+    transition: opacity 1s ease-in-out; /* Adjust the duration and easing as needed */
+}
+
+.fading-text.hidden {
+    opacity: 0;
+    pointer-events: none; /* Prevent interactions with the hidden element */
+}

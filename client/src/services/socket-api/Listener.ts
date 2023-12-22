@@ -20,6 +20,20 @@ function listen(event: string, callback: ListenerCallback): void {
 }
 
 /**
+ * @param event to drop listening to.
+ */
+function off(event: string): void {
+    const user = LocalStorage.getUser();
+
+    /* check user */
+    if (!user) {
+        return;
+    }
+
+    Emitter.refreshSocket().off(event);
+}
+
+/**
  * Activates message listener.
  *
  * @param callback takes message from another user.
@@ -80,4 +94,18 @@ export function onReady(callback: ListenerCallback<{peerId: string}>
  */
 export function onTermination(callback: ListenerCallback<undefined>): void {
     listen(Event.TERMINATE, callback);
+}
+
+/**
+ * @param callback
+ */
+export function onTranscript(callback: ListenerCallback<{sender: string, message: string}>): void {
+   listen(Event.TRANSCRIPT, callback);
+}
+
+/**
+ * Stops listening to transcripts.
+ */
+export function offTranscript() {
+    off(Event.TRANSCRIPT);
 }

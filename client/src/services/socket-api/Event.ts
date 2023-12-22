@@ -11,6 +11,7 @@
  * >- PREFERENCE: a user changed their preferences.
  * >- TERMINATE: a user terminated their session.
  * >- READY: a user is ready to initiate a call.
+ * >- TRANSCRIPT: a user sent their transcript.
  */
 enum Event {
     CONNECTION = "connection",
@@ -21,7 +22,8 @@ enum Event {
     LEAVE = "leave",
     TERMINATE = "terminate",
     PREFERENCE = "preference",
-    READY = "ready"
+    READY = "ready",
+    TRANSCRIPT = "transcript"
 }
 
 export default Event;

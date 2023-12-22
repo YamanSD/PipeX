@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import "@fontsource/poppins"; // Defaults to weight 400
 import "@fontsource/poppins/400-italic.css"; // Specify weight and style
 import {BrowserRouter, Link, Route, Routes, Navigate} from "react-router-dom";
@@ -7,7 +7,6 @@ import { toast } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import {
     addParticipant,
-    Listener,
     LocalStorage,
     removeParticipant, RootState,
     setUser,
